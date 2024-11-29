@@ -20,5 +20,7 @@ cd src
 2. Run scripts from `/src`:
 
 ```
-python -m preprocessing.cifar_10
+python -m models.example
 ```
+
+The file `/src/models/example.py` shows how to load the data in memory
