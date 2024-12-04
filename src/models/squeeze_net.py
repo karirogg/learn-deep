@@ -5,6 +5,9 @@ from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 from torch import nn
 import argparse
+import pdb
+import numpy as np
+
 
 def training_loop(
         train_tasks: list[torch.utils.data.DataLoader], 
@@ -39,6 +42,7 @@ def training_loop(
                 loss = criterion(outputs, labels)
                 loss.backward()
                 optimizer.step()
+                # pdb.set_trace()
 
         print(f'Results after training on task {i + 1}')
 
@@ -54,10 +58,17 @@ def training_loop(
 
     return task_test_losses, task_test_accuracies
 
+seed = 42
+torch.manual_seed(seed)
+torch.cuda.manual_seed(seed)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
     
 num_classes = 10
 
-model = nn.Sequential(torch.hub.load('pytorch/vision:v0.10.0', 'squeezenet1_0', pretrained=True), nn.LazyLinear(num_classes))
+model = nn.Sequential(torch.hub.load('pytorch/vision:v0.10.0', 'squeezenet1_0', pretrained=True), nn.LazyLinear(num_classes)).to(device)
 
 # Define the optimizer
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
@@ -110,8 +121,8 @@ for i in range(1, n+1):
     with open(f'../data/cifar-10-{n}/test/task_{i}', 'rb') as f:
         task_test, task_test_labels = pickle.load(f)
 
-    train_tasks.append(DataLoader(TensorDataset(torch.tensor(task_train, dtype=torch.float32), torch.tensor(task_labels, dtype=torch.long)), batch_size=64, shuffle=True))
-    test_tasks.append(DataLoader(TensorDataset(torch.tensor(task_test, dtype=torch.float32), torch.tensor(task_test_labels, dtype=torch.long)), batch_size=64, shuffle=False))
+    train_tasks.append(DataLoader(TensorDataset(torch.tensor(task_train, dtype=torch.float32, device=device), torch.tensor(task_labels, dtype=torch.long, device=device)), batch_size=64, shuffle=True))
+    test_tasks.append(DataLoader(TensorDataset(torch.tensor(task_test, dtype=torch.float32, device=device), torch.tensor(task_test_labels, dtype=torch.long, device=device)), batch_size=64, shuffle=False))
 
 task_test_losses, task_test_accuracies = training_loop(train_tasks, test_tasks, model, optimizer, criterion, accuracy, evaluate, epochs_per_task)
 
