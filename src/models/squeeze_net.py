@@ -39,8 +39,11 @@ def training_loop(
         print(f'Training on task {i + 1}')
         grad_matrices = []
         checkpoints = np.linspace(0, epochs_per_task, num_checkpoints, endpoint=False, dtype=np.int32)
-        input_images = torch.cat([img for img, _ in task], dim=0)
-        epoch_labels = torch.cat([labels for _, labels in task], dim=0)
+        # pdb.set_trace()
+        # input_images = torch.cat([img for img, _ in task], dim=0)
+        # epoch_labels = torch.cat([labels for _, labels in task], dim=0)
+        input_images, epoch_labels = map(torch.cat, zip(*[(img, labels) for img, labels in task]))
+
         for epoch in tqdm(range(epochs_per_task)):
             grad_matrices_epoch = []
             for inputs, labels in task:
@@ -95,6 +98,7 @@ def visualize_VoG(grad_variances, input_images, labels, num_imgs=10):
         for j, (t_img, b_img) in enumerate(zip(top_imgs, bottom_imgs)):
             Image.fromarray(t_img.permute(1, 2, 0).byte().cpu().detach().numpy()).save(f"../visus/vog/top_picks/class_{l}_pick_{j}.png")
             Image.fromarray(b_img.permute(1, 2, 0).byte().cpu().detach().numpy()).save(f"../visus/vog/bottom_picks/class_{l}_pick_{j}.png")
+    return
 
 
 seed = 42
