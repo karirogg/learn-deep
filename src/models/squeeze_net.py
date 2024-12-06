@@ -7,6 +7,7 @@ from torch import nn
 import argparse
 import pdb
 import numpy as np
+from PIL import Image
 
 
 def training_loop(
@@ -17,7 +18,8 @@ def training_loop(
         criterion: torch.nn.Module, 
         metric: Callable[[float], float],
         evaluate: Callable[[torch.nn.Module, torch.utils.data.DataLoader, torch.nn.Module, Callable[[float], float]], tuple[float, float]],
-        epochs_per_task: int
+        epochs_per_task: int,
+        num_checkpoints : int
     ) -> list[float]:
     """
     The function trains the model on each of the different tasks sequentially using continual learning and uses a replay buffer to store the data from the previous tasks.
@@ -35,15 +37,27 @@ def training_loop(
 
     for i, task in enumerate(train_tasks):
         print(f'Training on task {i + 1}')
-        for _ in tqdm(range(epochs_per_task)):
+        grad_matrices = []
+        checkpoints = np.linspace(0, epochs_per_task, num_checkpoints, endpoint=False, dtype=np.int32)
+        input_images = torch.cat([img for img, _ in task], dim=0)
+        epoch_labels = torch.cat([labels for _, labels in task], dim=0)
+        for epoch in tqdm(range(epochs_per_task)):
+            grad_matrices_epoch = []
             for inputs, labels in task:
                 optimizer.zero_grad()
+                inputs.retain_grad()
                 outputs = model(inputs)
                 loss = criterion(outputs, labels)
                 loss.backward()
+                if epoch in checkpoints:
+                    pixel_grads = inputs.grad.mean(axis=1)
+                    grad_matrices_epoch.append(pixel_grads.clone())
                 optimizer.step()
-                # pdb.set_trace()
-
+            if epoch in checkpoints:
+                grad_matrices.append(torch.concat(grad_matrices_epoch, axis=0))
+        grad_variances = compute_VoG(grad_matrices, epoch_labels, checkpoints)
+        visualize_VoG(grad_variances, input_images, epoch_labels)
+        
         print(f'Results after training on task {i + 1}')
 
         for i, task_test in enumerate(test_tasks):
@@ -58,6 +72,31 @@ def training_loop(
 
     return task_test_losses, task_test_accuracies
 
+def compute_VoG(grad_matrices, epoch_labels, checkpoints):
+    # calculate VoG
+    grad_matrices = torch.stack(grad_matrices, axis=0)
+    grad_means = torch.mean(grad_matrices, axis=0)
+    grad_variances = np.sqrt(1 / len(checkpoints)) * torch.sum(torch.pow(grad_matrices - grad_means.unsqueeze(0), 2), axis=0)
+    grad_variances = grad_variances.mean(axis=[1, 2]) # average over pixels    
+    # normalise per class
+    normalised_grad_variances = []
+    for l in epoch_labels.unique():
+        class_grad_variances = grad_variances[epoch_labels == l]
+        normalized_class_values = (class_grad_variances - class_grad_variances.mean()).abs() / class_grad_variances.std()
+        normalised_grad_variances.append(normalized_class_values)
+    return normalised_grad_variances
+
+def visualize_VoG(grad_variances, input_images, labels, num_imgs=10):
+    for i, l in enumerate(labels.unique()):
+        _, top_idcs = torch.topk(grad_variances[i], k=num_imgs, largest=True, sorted=False)
+        _, bottom_idcs = torch.topk(grad_variances[i], k=num_imgs, largest=False, sorted=False)
+        top_imgs = input_images[labels == l][top_idcs, :, :, :]
+        bottom_imgs = input_images[labels == l][bottom_idcs, :, :, :]
+        for j, (t_img, b_img) in enumerate(zip(top_imgs, bottom_imgs)):
+            Image.fromarray(t_img.permute(1, 2, 0).byte().cpu().detach().numpy()).save(f"../visus/vog/top_picks/class_{l}_pick_{j}.png")
+            Image.fromarray(b_img.permute(1, 2, 0).byte().cpu().detach().numpy()).save(f"../visus/vog/bottom_picks/class_{l}_pick_{j}.png")
+
+
 seed = 42
 torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
@@ -68,7 +107,16 @@ print(f"Using device: {device}")
     
 num_classes = 10
 
-model = nn.Sequential(torch.hub.load('pytorch/vision:v0.10.0', 'squeezenet1_0', pretrained=True), nn.LazyLinear(num_classes)).to(device)
+squeeze_net = torch.hub.load('pytorch/vision:v0.10.0', 'squeezenet1_0', pretrained=True)
+
+model = squeeze_net
+model.classifier = nn.Sequential( # modify classifier layer to return correct number of classes
+    nn.Dropout(p=0.5, inplace=False),
+    nn.Conv2d(512, num_classes, kernel_size=(1, 1), stride=(1, 1)),
+    nn.ReLU(inplace=True),
+    nn.AdaptiveAvgPool2d(output_size=(1, 1))
+)
+model = model.to(device)
 
 # Define the optimizer
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
@@ -99,6 +147,8 @@ def evaluate(model: torch.nn.Module, test_loader: torch.utils.data.DataLoader, c
 
 # Define the number of epochs per task
 epochs_per_task = 10
+batch_size = 100
+num_checkpoints = 5
 
 # Define the training and testing tasks
 train_tasks = []
@@ -121,10 +171,10 @@ for i in range(1, n+1):
     with open(f'../data/cifar-10-{n}/test/task_{i}', 'rb') as f:
         task_test, task_test_labels = pickle.load(f)
 
-    train_tasks.append(DataLoader(TensorDataset(torch.tensor(task_train, dtype=torch.float32, device=device), torch.tensor(task_labels, dtype=torch.long, device=device)), batch_size=64, shuffle=True))
-    test_tasks.append(DataLoader(TensorDataset(torch.tensor(task_test, dtype=torch.float32, device=device), torch.tensor(task_test_labels, dtype=torch.long, device=device)), batch_size=64, shuffle=False))
+    train_tasks.append(DataLoader(TensorDataset(torch.tensor(task_train, dtype=torch.float32, device=device, requires_grad=True), torch.tensor(task_labels, dtype=torch.long, device=device)), batch_size=batch_size, shuffle=True))
+    test_tasks.append(DataLoader(TensorDataset(torch.tensor(task_test, dtype=torch.float32, device=device, requires_grad=True), torch.tensor(task_test_labels, dtype=torch.long, device=device)), batch_size=batch_size, shuffle=False))
 
-task_test_losses, task_test_accuracies = training_loop(train_tasks, test_tasks, model, optimizer, criterion, accuracy, evaluate, epochs_per_task)
+task_test_losses, task_test_accuracies = training_loop(train_tasks, test_tasks, model, optimizer, criterion, accuracy, evaluate, epochs_per_task, num_checkpoints)
 
 for i, (losses, accuracies) in enumerate(zip(task_test_losses, task_test_accuracies)):
     print(f'Task {i+1} test loss: {losses}')
