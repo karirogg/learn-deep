@@ -75,6 +75,27 @@ def training_loop(
 
     return task_test_losses, task_test_accuracies
 
+# Define the evaluation metric
+def accuracy(output: torch.Tensor, target: torch.Tensor) -> float:
+    return (output.argmax(1) == target).float().mean().item()
+
+# Define the evaluation function
+def evaluate(model: torch.nn.Module, test_loader: torch.utils.data.DataLoader, criterion: torch.nn.Module, metric: Callable[[float], float]) -> tuple[float, float]:
+    model.eval()
+    test_loss = 0
+    test_accuracy = 0
+
+    with torch.no_grad():
+        for inputs, labels in test_loader:
+            outputs = model(inputs)
+            test_loss += criterion(outputs, labels).item()
+            test_accuracy += metric(outputs, labels)
+
+    test_loss /= len(test_loader)
+    test_accuracy /= len(test_loader)
+
+    return test_loss, test_accuracy
+
 def compute_VoG(grad_matrices, epoch_labels, checkpoints):
     # calculate VoG
     grad_matrices = torch.stack(grad_matrices, axis=0)
@@ -100,6 +121,47 @@ def visualize_VoG(grad_variances, input_images, labels, num_imgs=10):
             Image.fromarray(b_img.permute(1, 2, 0).byte().cpu().detach().numpy()).save(f"../visus/vog/bottom_picks/class_{l}_pick_{j}.png")
     return
 
+def mc_dropout_inference(model, dataloader, num_samples=50, device, probs=True):
+    """
+    Perform MC Dropout inference over a dataloader to compute the variance of predictions.
+    """
+
+    model.train()   # Enable dropout during inference
+    mean_predictions = []
+    variances = []
+    
+    with torch.no_grad():
+        for inputs, _ in dataloader:
+            inputs = inputs.to(device)
+            batch_predictions = []
+            
+            for _ in range(num_samples):
+                if probs:
+                    outputs = model(inputs)     # [batch_size, num_classes]
+                    outputs = torch.nn.functional.softmax(outputs, dim=1)
+                else:
+                    outputs = model(inputs)
+
+                batch_predictions.append(outputs)
+            
+            batch_predictions = torch.stack(batch_predictions)  # [num_samples, batch_size, num_classes]
+            batch_mean = batch_predictions.mean(dim=0)  # [batch_size, num_classes]
+            batch_variance = batch_predictions.var(dim=0)  
+            
+            mean_predictions.append(batch_mean)
+            variances.append(batch_variance)
+    
+    mean_predictions = torch.cat(mean_predictions, dim=0)   # [num_examples, num_classes]
+    variances = torch.cat(variances, dim=0)
+
+    if probs:
+        predictive_entropy = -torch.sum((mean_predictions + 1e-9) * torch.log(mean_predictions + 1e-9), dim=1)  # [num_examples]
+        weighted_variances = torch.sum(mean_predictions * variances, dim=1)
+
+        return mean_predictions, variances, predictive_entropy, weighted_variances
+    
+    return mean_predictions, variances
+
 
 seed = 42
 torch.manual_seed(seed)
@@ -111,7 +173,7 @@ print(f"Using device: {device}")
     
 num_classes = 10
 
-squeeze_net = torch.hub.load('pytorch/vision:v0.10.0', 'squeezenet1_0', pretrained=True)
+squeeze_net = torch.hub.load('pytorch/vision:v0.10.0', 'squeezenet1_1', pretrained=True)
 
 model = squeeze_net
 model.classifier = nn.Sequential( # modify classifier layer to return correct number of classes
@@ -127,27 +189,6 @@ optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
 
 # Define the loss function
 criterion = torch.nn.CrossEntropyLoss()
-
-# Define the evaluation metric
-def accuracy(output: torch.Tensor, target: torch.Tensor) -> float:
-    return (output.argmax(1) == target).float().mean().item()
-
-# Define the evaluation function
-def evaluate(model: torch.nn.Module, test_loader: torch.utils.data.DataLoader, criterion: torch.nn.Module, metric: Callable[[float], float]) -> tuple[float, float]:
-    model.eval()
-    test_loss = 0
-    test_accuracy = 0
-
-    with torch.no_grad():
-        for inputs, labels in test_loader:
-            outputs = model(inputs)
-            test_loss += criterion(outputs, labels).item()
-            test_accuracy += metric(outputs, labels)
-
-    test_loss /= len(test_loader)
-    test_accuracy /= len(test_loader)
-
-    return test_loss, test_accuracy
 
 # Define the number of epochs per task
 epochs_per_task = 10
