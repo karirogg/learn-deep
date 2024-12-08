@@ -121,7 +121,8 @@ def visualize_VoG(grad_variances, input_images, labels, num_imgs=10):
             Image.fromarray(b_img.permute(1, 2, 0).byte().cpu().detach().numpy()).save(f"../visus/vog/bottom_picks/class_{l}_pick_{j}.png")
     return
 
-def mc_dropout_inference(model, dataloader, num_samples=50, device, probs=True):
+
+def mc_dropout_inference(model, dataloader, device, num_samples=50, probs=True):
     """
     Perform MC Dropout inference over a dataloader to compute the variance of predictions.
     """
@@ -129,12 +130,12 @@ def mc_dropout_inference(model, dataloader, num_samples=50, device, probs=True):
     model.train()   # Enable dropout during inference
     mean_predictions = []
     variances = []
-    
+
     with torch.no_grad():
         for inputs, _ in dataloader:
             inputs = inputs.to(device)
             batch_predictions = []
-            
+
             for _ in range(num_samples):
                 if probs:
                     outputs = model(inputs)     # [batch_size, num_classes]
@@ -143,14 +144,14 @@ def mc_dropout_inference(model, dataloader, num_samples=50, device, probs=True):
                     outputs = model(inputs)
 
                 batch_predictions.append(outputs)
-            
+
             batch_predictions = torch.stack(batch_predictions)  # [num_samples, batch_size, num_classes]
             batch_mean = batch_predictions.mean(dim=0)  # [batch_size, num_classes]
             batch_variance = batch_predictions.var(dim=0)  
-            
+
             mean_predictions.append(batch_mean)
             variances.append(batch_variance)
-    
+
     mean_predictions = torch.cat(mean_predictions, dim=0)   # [num_examples, num_classes]
     variances = torch.cat(variances, dim=0)
 
@@ -159,68 +160,115 @@ def mc_dropout_inference(model, dataloader, num_samples=50, device, probs=True):
         weighted_variances = torch.sum(mean_predictions * variances, dim=1)
 
         return mean_predictions, variances, predictive_entropy, weighted_variances
-    
+
     return mean_predictions, variances
 
 
-seed = 42
-torch.manual_seed(seed)
-torch.cuda.manual_seed(seed)
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {device}")
-    
-num_classes = 10
+if __name__ == "__main__":
+    seed = 42
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
 
-squeeze_net = torch.hub.load('pytorch/vision:v0.10.0', 'squeezenet1_1', pretrained=True)
+    num_classes = 10
 
-model = squeeze_net
-model.classifier = nn.Sequential( # modify classifier layer to return correct number of classes
-    nn.Dropout(p=0.5, inplace=False),
-    nn.Conv2d(512, num_classes, kernel_size=(1, 1), stride=(1, 1)),
-    nn.ReLU(inplace=True),
-    nn.AdaptiveAvgPool2d(output_size=(1, 1))
-)
-model = model.to(device)
+    squeeze_net = torch.hub.load(
+        "pytorch/vision:v0.10.0",
+        "squeezenet1_1",
+        weights="SqueezeNet1_1_Weights.DEFAULT",
+    )
 
-# Define the optimizer
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
+    model = squeeze_net
+    model.classifier = (
+        nn.Sequential(  # modify classifier layer to return correct number of classes
+            nn.Dropout(p=0.5, inplace=False),
+            nn.Conv2d(512, num_classes, kernel_size=(1, 1), stride=(1, 1)),
+            nn.ReLU(inplace=True),
+            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+        )
+    )
+    model = model.to(device)
 
-# Define the loss function
-criterion = torch.nn.CrossEntropyLoss()
+    # Define the optimizer
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
 
-# Define the number of epochs per task
-epochs_per_task = 10
-batch_size = 100
-num_checkpoints = 5
+    # Define the loss function
+    criterion = torch.nn.CrossEntropyLoss()
 
-# Define the training and testing tasks
-train_tasks = []
-test_tasks = []
+    # Define the number of epochs per task
+    epochs_per_task = 10
+    batch_size = 100
+    num_checkpoints = 5
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--n", action="store", type=int, default=5, help="Number of tasks"
-)
-args = parser.parse_args()
+    # Define the training and testing tasks
+    train_tasks = []
+    test_tasks = []
 
-n = args.n
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--n", action="store", type=int, default=5, help="Number of tasks"
+    )
+    args = parser.parse_args()
 
-print(n)
+    n = args.n
 
-for i in range(1, n+1):  
-    with open(f'../data/cifar-10-{n}/train/task_{i}', 'rb') as f:
-        task_train, task_labels = pickle.load(f)
+    print(n)
 
-    with open(f'../data/cifar-10-{n}/test/task_{i}', 'rb') as f:
-        task_test, task_test_labels = pickle.load(f)
+    for i in range(1, n + 1):
+        with open(f"../data/cifar-10-{n}/train/task_{i}", "rb") as f:
+            task_train, task_labels = pickle.load(f)
 
-    train_tasks.append(DataLoader(TensorDataset(torch.tensor(task_train, dtype=torch.float32, device=device, requires_grad=True), torch.tensor(task_labels, dtype=torch.long, device=device)), batch_size=batch_size, shuffle=True))
-    test_tasks.append(DataLoader(TensorDataset(torch.tensor(task_test, dtype=torch.float32, device=device, requires_grad=True), torch.tensor(task_test_labels, dtype=torch.long, device=device)), batch_size=batch_size, shuffle=False))
+        with open(f"../data/cifar-10-{n}/test/task_{i}", "rb") as f:
+            task_test, task_test_labels = pickle.load(f)
 
-task_test_losses, task_test_accuracies = training_loop(train_tasks, test_tasks, model, optimizer, criterion, accuracy, evaluate, epochs_per_task, num_checkpoints)
+        train_tasks.append(
+            DataLoader(
+                TensorDataset(
+                    torch.tensor(
+                        task_train,
+                        dtype=torch.float32,
+                        device=device,
+                        requires_grad=True,
+                    ),
+                    torch.tensor(task_labels, dtype=torch.long, device=device),
+                ),
+                batch_size=batch_size,
+                shuffle=True,
+            )
+        )
+        test_tasks.append(
+            DataLoader(
+                TensorDataset(
+                    torch.tensor(
+                        task_test,
+                        dtype=torch.float32,
+                        device=device,
+                        requires_grad=True,
+                    ),
+                    torch.tensor(task_test_labels, dtype=torch.long, device=device),
+                ),
+                batch_size=batch_size,
+                shuffle=False,
+            )
+        )
 
-for i, (losses, accuracies) in enumerate(zip(task_test_losses, task_test_accuracies)):
-    print(f'Task {i+1} test loss: {losses}')
-    print(f'Task {i+1} test accuracy: {accuracies}')
+    task_test_losses, task_test_accuracies = training_loop(
+        train_tasks,
+        test_tasks,
+        model,
+        optimizer,
+        criterion,
+        accuracy,
+        evaluate,
+        epochs_per_task,
+        num_checkpoints,
+    )
+
+    for i, (losses, accuracies) in enumerate(
+        zip(task_test_losses, task_test_accuracies)
+    ):
+        print(f"Task {i+1} test loss: {losses}")
+        print(f"Task {i+1} test accuracy: {accuracies}")
