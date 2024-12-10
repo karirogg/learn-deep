@@ -35,9 +35,13 @@ with open(f'../data/cifar-10-batches-py/test_batch', 'rb') as fo:
 tasks = cifar_n(data, labels, n = n)
 test_tasks = cifar_n(test_data, test_labels, n = n)
 
-os.mkdir(f'../data/cifar-10-{n}')
-os.mkdir(f'../data/cifar-10-{n}/train')
-os.mkdir(f'../data/cifar-10-{n}/test')
+if not os.path.exists('../data'):
+    os.mkdir('../data')
+
+if not os.path.exists(f'../data/cifar-10-{n}'):
+    os.mkdir(f'../data/cifar-10-{n}')
+    os.mkdir(f'../data/cifar-10-{n}/train')
+    os.mkdir(f'../data/cifar-10-{n}/test')
 
 for i, task in enumerate(tasks):
     with open(f'../data/cifar-10-{n}/train/task_{i+1}', 'wb') as f:
