@@ -2,9 +2,12 @@ from torch import nn
 import torch.nn.functional as F
 
 class CIFAR_CNN(nn.Module):
-    def __init__(self, num_classes=10):
+    def __init__(self, cfg):
         super(CIFAR_CNN, self).__init__()
         
+        # extract hyperparams
+        num_classes = cfg["num_classes"]
+
         # Convolutional layers
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, padding=1)  # 32x32 -> 32x32
         self.conv2 = nn.Conv2d(64, 128, kernel_size=3, padding=1)  # 32x32 -> 32x32
