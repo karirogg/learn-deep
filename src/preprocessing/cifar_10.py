@@ -17,7 +17,7 @@ data = []
 labels = []
 
 for i in range(1,6):
-    with open(f'../data/cifar-10-batches-py/data_batch_{i}', 'rb') as fo:
+    with open(f'../raw_data/cifar-10-batches-py/data_batch_{i}', 'rb') as fo:
         batch = pickle.load(fo, encoding='bytes')
 
         data.append(batch[b'data'])
@@ -26,7 +26,7 @@ for i in range(1,6):
 data = np.concatenate(data).reshape(-1, 3, 32, 32)
 labels = np.concatenate(labels).reshape(-1)
 
-with open(f'../data/cifar-10-batches-py/test_batch', 'rb') as fo:
+with open(f'../raw_data/cifar-10-batches-py/test_batch', 'rb') as fo:
     batch = pickle.load(fo, encoding='bytes')
 
     test_data = batch[b'data'].reshape(-1, 3, 32, 32)
