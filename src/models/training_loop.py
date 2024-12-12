@@ -52,7 +52,7 @@ def training_loop(
         for epoch in tqdm(range(epochs_per_task)):
             replay_buffer = None
             if len(replay_buffer_X_list):
-                replay_buffer = iter(DataLoader(TensorDataset(torch.cat(replay_buffer_X_list, dim=0), torch.cat(replay_buffer_y_list, dim=0)), batch_size=32, shuffle=True))
+                replay_buffer = iter(DataLoader(TensorDataset(torch.cat(replay_buffer_X_list, dim=0), torch.cat(replay_buffer_y_list, dim=0)), batch_size=16, shuffle=True))
             else:
                 replay_buffer = iter([])
 
