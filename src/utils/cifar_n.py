@@ -18,7 +18,7 @@ def cifar_n(data, labels, n):
         task_data = np.concatenate(task_data)
         task_labels = np.concatenate(task_labels)
 
-        tasks.append((task_data, task_labels))
+        tasks.append((task_data, task_labels, np.unique(task_labels)))
 
     return tasks
 

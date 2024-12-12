@@ -8,6 +8,9 @@ import argparse
 import numpy as np
 from torchvision import transforms
 import matplotlib.pyplot as plt
+import time
+import pickle
+import os
 
 from models.custom_cnn import CIFAR_CNN
 
@@ -16,11 +19,12 @@ from metrics.vog import compute_VoG, visualize_VoG
 def training_loop(
         train_tasks: list[torch.utils.data.DataLoader], 
         test_tasks: list[torch.utils.data.DataLoader], 
+        unique_labels: list[list[int]],
         model: torch.nn.Module, 
         optimizer: torch.optim.Optimizer, 
         criterion: torch.nn.Module, 
         metric: Callable[[float], float],
-        evaluate: Callable[[torch.nn.Module, torch.utils.data.DataLoader, torch.nn.Module, Callable[[float], float]], tuple[float, float]],
+        evaluate: Callable[[torch.nn.Module, torch.utils.data.DataLoader, torch.nn.Module, Callable[[float], float], list[str]], tuple[float, float]],
         epochs_per_task: int,
         num_checkpoints : int
     ) -> list[float]:
@@ -64,7 +68,7 @@ def training_loop(
             #     replay_buffer = iter([])
 
             # grad_matrices_epoch = []
-            for inputs, labels, indices in tqdm(task):
+            for inputs, labels, _ in task:
                 # print(inputs.shape)
                 # try:
                 #     replay_inputs, replay_labels = next(replay_buffer)
@@ -116,7 +120,7 @@ def training_loop(
         # visualize_VoG(grad_variances, input_images, epoch_labels)
 
             for j, task_train in enumerate(train_tasks):
-                _, _, sample_wise_accuracy = evaluate(model, task_train, criterion, metric)
+                _, _, sample_wise_accuracy = evaluate(model, task_train, criterion, metric, unique_labels[j])
 
                 epoch_wise_classification_matrices[j][:, i, epoch] = sample_wise_accuracy
     
@@ -124,7 +128,7 @@ def training_loop(
 
         with torch.no_grad():
             for i, task_test in enumerate(test_tasks):
-                test_loss, test_accuracy, _ = evaluate(model, task_test, criterion, metric)
+                test_loss, test_accuracy, _ = evaluate(model, task_test, criterion, metric, unique_labels[i])
 
                 task_test_losses[i].append(test_loss)
                 task_test_accuracies[i].append(test_accuracy)
@@ -132,25 +136,20 @@ def training_loop(
                 print(f'Task {i+1} test loss: {test_loss}')
                 print(f'Task {i+1} test accuracy: {test_accuracy}')
 
-    for i, task in enumerate(train_tasks):
-        task_progression = []
-        for j in range(len(train_tasks)):
-            task_progression.append(torch.mean(epoch_wise_classification_matrices[i][:, j, :], dim=0))
-
-        plt.plot(np.arange(len(train_tasks) * epochs_per_task), np.concatenate(task_progression, axis=0))
-
-    plt.show()
-
-    return task_test_losses, task_test_accuracies
+    return task_test_losses, task_test_accuracies, epoch_wise_classification_matrices
 
 # Define the evaluation metric
-def accuracy(output: torch.Tensor, target: torch.Tensor) -> float:
-    acc = (output.argmax(1) == target).float()
+def accuracy(output: torch.Tensor, target: torch.Tensor, available_targets: list[int]) -> float:
+    # mask output to only consider the classes present in the target
+    output_masked = -torch.inf * torch.ones_like(output)
+    output_masked[:, available_targets] = output[:, available_targets]
+
+    acc = (output_masked.argmax(dim=1) == target).float()
 
     return acc.mean().item(), acc
 
 # Define the evaluation function
-def evaluate(model: torch.nn.Module, evaluation_loader: torch.utils.data.DataLoader, criterion: torch.nn.Module, metric: Callable[[float], float]) -> tuple[float, float]:
+def evaluate(model: torch.nn.Module, evaluation_loader: torch.utils.data.DataLoader, criterion: torch.nn.Module, metric: Callable[[float], float], unique_labels: list[str]) -> tuple[float, float]:
     model.eval()
     test_loss = 0
     test_accuracy = 0
@@ -163,7 +162,7 @@ def evaluate(model: torch.nn.Module, evaluation_loader: torch.utils.data.DataLoa
             outputs = model(inputs)
             test_loss += criterion(outputs, labels).item()
             
-            batch_metric_agg, sample_wise_metric = metric(outputs, labels)
+            batch_metric_agg, sample_wise_metric = metric(outputs, labels, unique_labels)
 
             test_accuracy += batch_metric_agg
 
@@ -232,15 +231,17 @@ if __name__ == "__main__":
     n = args.n
     epochs_per_task = args.epochs
 
-    print(n)
+    unique_labels = []
 
     for i in range(1, n + 1):
         with open(f"../data/cifar-10-{n}/train/task_{i}", "rb") as f:
-            task_train, task_labels = pickle.load(f)
+            task_train, task_labels, unique_task_labels = pickle.load(f)
 
         with open(f"../data/cifar-10-{n}/test/task_{i}", "rb") as f:
-            task_test, task_test_labels = pickle.load(f)
+            task_test, task_test_labels, _ = pickle.load(f)
 
+
+        unique_labels.append(unique_task_labels)
 
         # Custom preprocessing function to handle batch processing of the dataset
         # Convert the numpy array into a tensor (for all images in the batch)
@@ -283,9 +284,10 @@ if __name__ == "__main__":
             )
         )
 
-    task_test_losses, task_test_accuracies = training_loop(
+    task_test_losses, task_test_accuracies, epoch_wise_classification_matrices = training_loop(
         train_tasks,
         test_tasks,
+        unique_labels,
         model,
         optimizer,
         criterion,
@@ -294,6 +296,37 @@ if __name__ == "__main__":
         epochs_per_task,
         num_checkpoints,
     )
+
+    for i, task in enumerate(train_tasks):
+        task_progression = []
+        for j in range(len(train_tasks)):
+            task_progression.append(torch.mean(epoch_wise_classification_matrices[i][:, j, :], dim=0))
+
+        plt.plot(np.arange(len(train_tasks) * epochs_per_task), np.concatenate(task_progression, axis=0), label=f'Task {i+1}')
+
+    plt.legend()
+
+    if not os.path.exists('../img/task_progression'):
+        os.mkdir('../img/task_progression')
+        os.mkdir('../img/heatmaps')
+
+    plt.xlabel('Epoch')
+    plt.ylabel('Classification Accuracy')
+
+    plt.xlim(0, len(train_tasks) * epochs_per_task)
+    plt.ylim(0, 1)
+
+    plt.savefig(f'../img/task_progression/n_{n}_epochs_{epochs_per_task}.png')
+    plt.close()
+
+    for i, task in enumerate(train_tasks):
+        # plot heatmap of classification accuracy per sample
+
+        concat_task_progression = torch.cat([epoch_wise_classification_matrices[i][:, j, :] for j in range(len(train_tasks))], dim=0)
+
+        plt.imshow(concat_task_progression.cpu().numpy(), cmap='hot', interpolation='nearest')
+
+        plt.savefig(f'../img/heatmaps/n_{n}_task_{i+1}_epochs_{epochs_per_task}.png')
 
     for i, (losses, accuracies) in enumerate(
         zip(task_test_losses, task_test_accuracies)
