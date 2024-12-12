@@ -37,7 +37,7 @@ def training_loop(
 
     epoch_wise_classification_matrices = []
 
-    for task in range(len(train_tasks)):
+    for task in train_tasks:
         task_test_losses.append([])
         task_test_accuracies.append([])
 
@@ -115,27 +115,30 @@ def training_loop(
         # grad_variances = compute_VoG(grad_matrices, epoch_labels, checkpoints)
         # visualize_VoG(grad_variances, input_images, epoch_labels)
 
-                for j, task_train in enumerate(train_tasks):
-                    _, _, sample_wise_accuracy = evaluate(model, task_train, criterion, metric)
+            for j, task_train in enumerate(train_tasks):
+                _, _, sample_wise_accuracy = evaluate(model, task_train, criterion, metric)
 
-                    epoch_wise_classification_matrices[j][:, i, epoch] = sample_wise_accuracy
-        
-            print(f'Results after training on task {i + 1}')
+                epoch_wise_classification_matrices[j][:, i, epoch] = sample_wise_accuracy
+    
+        print(f'Results after training on task {i + 1}')
 
-            with torch.no_grad():
-                for i, task_test in enumerate(test_tasks):
-                    test_loss, test_accuracy = evaluate(model, task_test, criterion, metric)
+        with torch.no_grad():
+            for i, task_test in enumerate(test_tasks):
+                test_loss, test_accuracy, _ = evaluate(model, task_test, criterion, metric)
 
-                    task_test_losses[i].append(test_loss)
-                    task_test_accuracies[i].append(test_accuracy)
+                task_test_losses[i].append(test_loss)
+                task_test_accuracies[i].append(test_accuracy)
 
-                    print(f'Task {i+1} test loss: {test_loss}')
-                    print(f'Task {i+1} test accuracy: {test_accuracy}')
+                print(f'Task {i+1} test loss: {test_loss}')
+                print(f'Task {i+1} test accuracy: {test_accuracy}')
 
     for i, task in enumerate(train_tasks):
+        task_progression = []
         for j in range(len(train_tasks)):
-            plt.plot(np.arange(epochs_per_task), torch.mean(epoch_wise_classification_matrices[i][:, j, :], dim=0), label=f'Task {i+1}')
-            
+            task_progression.append(torch.mean(epoch_wise_classification_matrices[i][:, j, :], dim=0))
+
+        plt.plot(np.arange(len(train_tasks) * epochs_per_task), np.concatenate(task_progression, axis=0))
+
     plt.show()
 
     return task_test_losses, task_test_accuracies
@@ -152,7 +155,7 @@ def evaluate(model: torch.nn.Module, evaluation_loader: torch.utils.data.DataLoa
     test_loss = 0
     test_accuracy = 0
 
-    sample_wise_accuracy = torch.zeros(len(evaluation_loader.dataset))
+    sample_wise_accuracy = torch.zeros(len(evaluation_loader.dataset)).to(device)
 
     with torch.no_grad():
         for inputs, labels, indices in evaluation_loader:
@@ -209,7 +212,6 @@ if __name__ == "__main__":
     criterion = torch.nn.CrossEntropyLoss()
 
     # Define the number of epochs per task
-    epochs_per_task = 3
     batch_size = 64
     num_checkpoints = 5
 
@@ -221,9 +223,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--n", action="store", type=int, default=5, help="Number of tasks"
     )
+    parser.add_argument(
+        "--epochs", action="store", type=int, default=10, help="Number of epochs"
+    )
+    
     args = parser.parse_args()
 
     n = args.n
+    epochs_per_task = args.epochs
 
     print(n)
 
@@ -269,7 +276,7 @@ if __name__ == "__main__":
                 TensorDataset(
                     task_test_tensor,
                     torch.tensor(task_test_labels, dtype=torch.long, device=device),
-                    torch.arange(len(task_labels), device=device),
+                    torch.arange(len(task_test_labels), device=device),
                 ),
                 batch_size=batch_size,
                 shuffle=False,
