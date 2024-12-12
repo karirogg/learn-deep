@@ -7,6 +7,7 @@ from torch import nn
 import argparse
 import numpy as np
 from torchvision import transforms
+import matplotlib.pyplot as plt
 
 from models.custom_cnn import CIFAR_CNN
 
@@ -34,59 +35,65 @@ def training_loop(
     task_test_losses = []
     task_test_accuracies = []
 
-    for _ in range(len(train_tasks)):
+    epoch_wise_classification_matrices = []
+
+    for task in range(len(train_tasks)):
         task_test_losses.append([])
         task_test_accuracies.append([])
+
+        task_classification_matrix = torch.zeros((len(task.dataset), len(train_tasks), epochs_per_task))
+        epoch_wise_classification_matrices.append(task_classification_matrix)
+
 
     for i, task in enumerate(train_tasks):
         # here the batch size is 16 = 64/4, so we should expect the replay buffer to include 4 times less data than the current task
 
         print(f'Training on task {i + 1}')
-        grad_matrices = []
-        checkpoints = np.linspace(0, epochs_per_task, num_checkpoints, endpoint=False, dtype=np.int32)
+        # grad_matrices = []
+        # checkpoints = np.linspace(0, epochs_per_task, num_checkpoints, endpoint=False, dtype=np.int32)
         # pdb.set_trace()
         # input_images = torch.cat([img for img, _ in task], dim=0)
         # epoch_labels = torch.cat([labels for _, labels in task], dim=0)
-        input_images, epoch_labels = map(torch.cat, zip(*[(img, labels) for img, labels in task]))
+        # input_images, epoch_labels = map(torch.cat, zip(*[(img, labels) for img, labels in task]))
 
         for epoch in tqdm(range(epochs_per_task)):
-            replay_buffer = None
-            if len(replay_buffer_X_list):
-                replay_buffer = iter(DataLoader(TensorDataset(torch.cat(replay_buffer_X_list, dim=0), torch.cat(replay_buffer_y_list, dim=0)), batch_size=16, shuffle=True))
-            else:
-                replay_buffer = iter([])
+            # replay_buffer = None
+            # if len(replay_buffer_X_list):
+            #     replay_buffer = iter(DataLoader(TensorDataset(torch.cat(replay_buffer_X_list, dim=0), torch.cat(replay_buffer_y_list, dim=0)), batch_size=16, shuffle=True))
+            # else:
+            #     replay_buffer = iter([])
 
-            grad_matrices_epoch = []
-            for inputs, labels in tqdm(task):
+            # grad_matrices_epoch = []
+            for inputs, labels, indices in tqdm(task):
                 # print(inputs.shape)
-                try:
-                    replay_inputs, replay_labels = next(replay_buffer)
+                # try:
+                #     replay_inputs, replay_labels = next(replay_buffer)
 
-                    inputs = torch.cat([inputs, replay_inputs], dim=0)
-                    labels = torch.cat([labels, replay_labels], dim=0)
+                #     inputs = torch.cat([inputs, replay_inputs], dim=0)
+                #     labels = torch.cat([labels, replay_labels], dim=0)
 
-                    inputs.requires_grad_()  # Enable gradient tracking
-                    labels.requires_grad_()  # Enable gradient tracking
+                #     inputs.requires_grad_()  # Enable gradient tracking
+                #     labels.requires_grad_()  # Enable gradient tracking
 
-                except StopIteration:
-                    if i > 0:
-                        print("Replay buffer exhausted")
-                    pass
+                # except StopIteration:
+                #     if i > 0:
+                #         print("Replay buffer exhausted")
+                #     pass
 
-                if epoch == epochs_per_task - 1:
-                    # toss a coin w probability 1/4 to decide whether to use each sample in the inputs in the replay buffer
-                    # TODO: replace with a more sophisticated replay strategy
-                    mask = torch.rand((inputs.shape[0],))
-                    # print(mask)
-                    new_replay_inputs = inputs[mask <= 0.5].detach()
-                    new_replay_labels = labels[mask <= 0.5].detach()
+                # if epoch == epochs_per_task - 1:
+                #     # toss a coin w probability 1/4 to decide whether to use each sample in the inputs in the replay buffer
+                #     # TODO: replace with a more sophisticated replay strategy
+                #     mask = torch.rand((inputs.shape[0],))
+                #     # print(mask)
+                #     new_replay_inputs = inputs[mask <= 0.5].detach()
+                #     new_replay_labels = labels[mask <= 0.5].detach()
 
-                    # Convert to float32 before enabling gradients
-                    new_replay_inputs = new_replay_inputs.to(torch.float32)
-                    new_replay_labels = new_replay_labels.to(torch.float32)
+                #     # Convert to float32 before enabling gradients
+                #     new_replay_inputs = new_replay_inputs.to(torch.float32)
+                #     new_replay_labels = new_replay_labels.to(torch.float32)
 
-                    replay_buffer_X_list.append(new_replay_inputs)
-                    replay_buffer_y_list.append(new_replay_labels)
+                #     replay_buffer_X_list.append(new_replay_inputs)
+                #     replay_buffer_y_list.append(new_replay_labels)
 
                 inputs = inputs.to(device)
                 labels = labels.to(device)
@@ -107,43 +114,62 @@ def training_loop(
 
         # grad_variances = compute_VoG(grad_matrices, epoch_labels, checkpoints)
         # visualize_VoG(grad_variances, input_images, epoch_labels)
+
+                for j, task_train in enumerate(train_tasks):
+                    _, _, sample_wise_accuracy = evaluate(model, task_train, criterion, metric)
+
+                    epoch_wise_classification_matrices[j][:, i, epoch] = sample_wise_accuracy
         
-        print(f'Results after training on task {i + 1}')
+            print(f'Results after training on task {i + 1}')
 
-        with torch.no_grad():
-            for i, task_test in enumerate(test_tasks):
-                test_loss, test_accuracy = evaluate(model, task_test, criterion, metric)
+            with torch.no_grad():
+                for i, task_test in enumerate(test_tasks):
+                    test_loss, test_accuracy = evaluate(model, task_test, criterion, metric)
 
-                task_test_losses[i].append(test_loss)
-                task_test_accuracies[i].append(test_accuracy)
+                    task_test_losses[i].append(test_loss)
+                    task_test_accuracies[i].append(test_accuracy)
 
-                print(f'Task {i+1} test loss: {test_loss}')
-                print(f'Task {i+1} test accuracy: {test_accuracy}')
+                    print(f'Task {i+1} test loss: {test_loss}')
+                    print(f'Task {i+1} test accuracy: {test_accuracy}')
 
+    for i, task in enumerate(train_tasks):
+        for j in range(len(train_tasks)):
+            plt.plot(np.arange(epochs_per_task), torch.mean(epoch_wise_classification_matrices[i][:, j, :], dim=0), label=f'Task {i+1}')
+            
+    plt.show()
 
     return task_test_losses, task_test_accuracies
 
 # Define the evaluation metric
 def accuracy(output: torch.Tensor, target: torch.Tensor) -> float:
-    return (output.argmax(1) == target).float().mean().item()
+    acc = (output.argmax(1) == target).float()
+
+    return acc.mean().item(), acc
 
 # Define the evaluation function
-def evaluate(model: torch.nn.Module, test_loader: torch.utils.data.DataLoader, criterion: torch.nn.Module, metric: Callable[[float], float]) -> tuple[float, float]:
+def evaluate(model: torch.nn.Module, evaluation_loader: torch.utils.data.DataLoader, criterion: torch.nn.Module, metric: Callable[[float], float]) -> tuple[float, float]:
     model.eval()
     test_loss = 0
     test_accuracy = 0
 
+    sample_wise_accuracy = torch.zeros(len(evaluation_loader.dataset))
+
     with torch.no_grad():
-        for inputs, labels in test_loader:
+        for inputs, labels, indices in evaluation_loader:
             inputs, labels = inputs.to(device), labels.to(device)
             outputs = model(inputs)
             test_loss += criterion(outputs, labels).item()
-            test_accuracy += metric(outputs, labels)
+            
+            batch_metric_agg, sample_wise_metric = metric(outputs, labels)
 
-    test_loss /= len(test_loader)
-    test_accuracy /= len(test_loader)
+            test_accuracy += batch_metric_agg
 
-    return test_loss, test_accuracy
+            sample_wise_accuracy[indices] = sample_wise_metric
+
+    test_loss /= len(evaluation_loader)
+    test_accuracy /= len(evaluation_loader)
+
+    return test_loss, test_accuracy, sample_wise_accuracy
 
 
 if __name__ == "__main__":
@@ -232,6 +258,7 @@ if __name__ == "__main__":
                 TensorDataset(
                     task_train_tensor,
                     torch.tensor(task_labels, dtype=torch.long, device=device),
+                    torch.arange(len(task_labels), device=device), # this is to keep track of the order of the samples
                 ),
                 batch_size=batch_size,
                 shuffle=True,
@@ -242,6 +269,7 @@ if __name__ == "__main__":
                 TensorDataset(
                     task_test_tensor,
                     torch.tensor(task_test_labels, dtype=torch.long, device=device),
+                    torch.arange(len(task_labels), device=device),
                 ),
                 batch_size=batch_size,
                 shuffle=False,
