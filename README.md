@@ -24,3 +24,15 @@ python -m models.example
 ```
 
 The file `/src/models/example.py` shows how to load the data in memory
+
+## Preprocessing training data
+
+```
+python -m preprocessing.cifar_10 --n 2
+```
+
+## Running training loop
+
+```
+python -m models.training_loop --n 2
+```
