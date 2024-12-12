@@ -9,7 +9,6 @@ import numpy as np
 from torchvision import transforms
 import matplotlib.pyplot as plt
 import time
-import pickle
 import os
 
 from models.custom_cnn import CIFAR_CNN
@@ -63,7 +62,7 @@ def training_loop(
         for epoch in tqdm(range(epochs_per_task)):
             # replay_buffer = None
             # if len(replay_buffer_X_list):
-            #     replay_buffer = iter(DataLoader(TensorDataset(torch.cat(replay_buffer_X_list, dim=0), torch.cat(replay_buffer_y_list, dim=0)), batch_size=16, shuffle=True))
+            #     replay_buffer = iter(DataLoader(TensorDataset(torch.cat(replay_buffer_X_list, dim=0), torch.cat(replay_buffer_y_list, dim=0)), batch_size=8, shuffle=True))
             # else:
             #     replay_buffer = iter([])
 
@@ -77,24 +76,24 @@ def training_loop(
                 #     labels = torch.cat([labels, replay_labels], dim=0)
 
                 #     inputs.requires_grad_()  # Enable gradient tracking
-                #     labels.requires_grad_()  # Enable gradient tracking
+                #     # labels.requires_grad_()  # Enable gradient tracking
 
                 # except StopIteration:
                 #     if i > 0:
                 #         print("Replay buffer exhausted")
+                #         if len(replay_buffer_X_list):
+                #             replay_buffer = iter(DataLoader(TensorDataset(torch.cat(replay_buffer_X_list, dim=0), torch.cat(replay_buffer_y_list, dim=0)), batch_size=8, shuffle=True))
                 #     pass
 
                 # if epoch == epochs_per_task - 1:
                 #     # toss a coin w probability 1/4 to decide whether to use each sample in the inputs in the replay buffer
                 #     # TODO: replace with a more sophisticated replay strategy
-                #     mask = torch.rand((inputs.shape[0],))
-                #     # print(mask)
-                #     new_replay_inputs = inputs[mask <= 0.5].detach()
-                #     new_replay_labels = labels[mask <= 0.5].detach()
+                #     mask = torch.rand((inputs.shape[0],)) <= 0.1
+                #     new_replay_inputs = inputs[mask].detach()
+                #     new_replay_labels = labels[mask].detach()
 
-                #     # Convert to float32 before enabling gradients
                 #     new_replay_inputs = new_replay_inputs.to(torch.float32)
-                #     new_replay_labels = new_replay_labels.to(torch.float32)
+                #     new_replay_labels = new_replay_labels.to(torch.int64)
 
                 #     replay_buffer_X_list.append(new_replay_inputs)
                 #     replay_buffer_y_list.append(new_replay_labels)
@@ -183,8 +182,6 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.mps.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    num_classes = 10
-
     # squeeze_net = torch.hub.load(
     #     "pytorch/vision:v0.10.0",
     #     "squeezenet1_0",
@@ -225,19 +222,23 @@ if __name__ == "__main__":
     parser.add_argument(
         "--epochs", action="store", type=int, default=10, help="Number of epochs"
     )
+    parser.add_argument(
+        "--classes", action="store", type=int, default=10, help="Number of classes"
+    )
     
     args = parser.parse_args()
 
     n = args.n
     epochs_per_task = args.epochs
+    num_classes = args.classes
 
     unique_labels = []
 
     for i in range(1, n + 1):
-        with open(f"../data/cifar-10-{n}/train/task_{i}", "rb") as f:
+        with open(f"../data/cifar-{num_classes}-{n}/train/task_{i}", "rb") as f:
             task_train, task_labels, unique_task_labels = pickle.load(f)
 
-        with open(f"../data/cifar-10-{n}/test/task_{i}", "rb") as f:
+        with open(f"../data/cifar-{num_classes}-{n}/test/task_{i}", "rb") as f:
             task_test, task_test_labels, _ = pickle.load(f)
 
 
@@ -297,6 +298,9 @@ if __name__ == "__main__":
         num_checkpoints,
     )
 
+    with open(f'../checkpoints/cifar_{num_classes}_n_{n}_epochs_{epochs_per_task}_epoch_class_mat.pt', 'wb') as f:
+        pickle.dump(epoch_wise_classification_matrices, f)
+
     for i, task in enumerate(train_tasks):
         task_progression = []
         for j in range(len(train_tasks)):
@@ -316,17 +320,20 @@ if __name__ == "__main__":
     plt.xlim(0, len(train_tasks) * epochs_per_task)
     plt.ylim(0, 1)
 
-    plt.savefig(f'../img/task_progression/n_{n}_epochs_{epochs_per_task}.png')
+    plt.savefig(f'../img/task_progression/cifar_{num_classes}_n_{n}_epochs_{epochs_per_task}.png')
     plt.close()
 
     for i, task in enumerate(train_tasks):
         # plot heatmap of classification accuracy per sample
 
-        concat_task_progression = torch.cat([epoch_wise_classification_matrices[i][:, j, :] for j in range(len(train_tasks))], dim=0)
+        order = torch.argsort(torch.mean(epoch_wise_classification_matrices[i][:,i,:], axis=1), descending=False)
 
-        plt.imshow(concat_task_progression.cpu().numpy(), cmap='hot', interpolation='nearest')
+        concat_task_progression = torch.cat([epoch_wise_classification_matrices[i][:, j, :] for j in range(n)], dim=1)[order]
 
-        plt.savefig(f'../img/heatmaps/n_{n}_task_{i+1}_epochs_{epochs_per_task}.png')
+        plt.figure(figsize=(5 * n, 5))
+        plt.imshow(concat_task_progression.cpu().numpy(), cmap='cividis', interpolation='nearest', aspect='auto')
+
+        plt.savefig(f'../img/heatmaps/cifar_{num_classes}_n_{n}_task_{i+1}_epochs_{epochs_per_task}.png')
 
     for i, (losses, accuracies) in enumerate(
         zip(task_test_losses, task_test_accuracies)
