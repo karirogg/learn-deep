@@ -33,6 +33,8 @@ python -m preprocessing.cifar_10 --n 2
 
 ## Running training loop
 
+This is an example of the flags one can include in the call
+
 ```
-python -m models.training_loop --n 2
+python -m models.cifar.train --classes 10 --n 2 --epochs 10 --replay uniform
 ```
