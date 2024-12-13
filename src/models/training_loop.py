@@ -6,13 +6,17 @@ from tqdm import tqdm
 from torch import nn
 import argparse
 import numpy as np
-from torchvision import transforms
 import matplotlib.pyplot as plt
-import time
 import os
-import torch.nn.init as init
 import wandb
-import pdb
+
+from replay_buffers.uniform_replay_buffer import uniform_replay_buffer
+
+from models.cifar.accuracy import accuracy
+from models.cifar.evaluate import evaluate
+from models.cifar.task_preprocessing import preprocess_cifar
+
+from utils.fix_seed import fix_seed
 
 from models.custom_cnn import CIFAR_CNN
 
@@ -25,10 +29,12 @@ def training_loop(
         model: torch.nn.Module, 
         optimizer: torch.optim.Optimizer, 
         criterion: torch.nn.Module, 
+        device: torch.device,
         metric: Callable[[float], float],
-        evaluate: Callable[[torch.nn.Module, torch.utils.data.DataLoader, torch.nn.Module, Callable[[float], float], list[str]], tuple[float, float]],
+        evaluate: Callable[[torch.nn.Module, torch.utils.data.DataLoader, torch.nn.Module, torch.device, Callable[[float], float], list[str]], tuple[float, float]],
+        replay_buffer_strategy: Callable[[torch.nn.Module, torch.utils.data.DataLoader, list[torch.Tensor], list[torch.Tensor], int], tuple[list[torch.Tensor], list[torch.Tensor]]],
+        max_replay_buffer_size: int,
         epochs_per_task: int,
-        num_checkpoints : int
     ) -> list[float]:
     """
     The function trains the model on each of the different tasks sequentially using continual learning and uses a replay buffer to store the data from the previous tasks.
@@ -50,16 +56,35 @@ def training_loop(
         task_classification_matrix = torch.zeros((len(task.dataset), len(train_tasks), epochs_per_task))
         epoch_wise_classification_matrices.append(task_classification_matrix)
 
-
     for i, task in enumerate(train_tasks):
-        # here the batch size is 16 = 64/4, so we should expect the replay buffer to include 4 times less data than the current task
-
         print(f'Training on task {i + 1}')
 
         for epoch in tqdm(range(epochs_per_task)):
+            replay_buffer = None
+
+            if len(replay_buffer_X_list):
+                replay_buffer = iter(DataLoader(TensorDataset(torch.cat(replay_buffer_X_list, dim=0), torch.cat(replay_buffer_y_list, dim=0)), batch_size=8, shuffle=True))
+
             for inputs, labels, _ in task:
+                replay_inputs = None
+                replay_labels = None
+
+                if len(replay_buffer_X_list):
+                    try:
+                        replay_inputs, replay_labels = next(replay_buffer)
+                    except StopIteration:
+                        replay_buffer = iter(DataLoader(TensorDataset(torch.cat(replay_buffer_X_list, dim=0), torch.cat(replay_buffer_y_list, dim=0), batch_size=8, shuffle=True)))
+                        replay_inputs, replay_labels = next(replay_buffer)
+
+                    if replay_inputs is not None:
+                        inputs = torch.cat([inputs, replay_inputs], dim=0)
+                        labels = torch.cat([labels, replay_labels], dim=0)
+
+                        inputs.requires_grad_()
+
                 inputs = inputs.to(device)
                 labels = labels.to(device)
+
                 optimizer.zero_grad()
                 outputs = model(inputs)
                 loss = criterion(outputs, labels)
@@ -68,24 +93,17 @@ def training_loop(
                 wandb.log({f"train-loss_task-{i}": loss})
 
             for j, task_train in enumerate(train_tasks):
-                _, _, sample_wise_accuracy = evaluate(model, task_train, criterion, metric, unique_labels[j])
+                _, _, sample_wise_accuracy = evaluate(model, task_train, criterion, device, metric, unique_labels[j])
 
                 epoch_wise_classification_matrices[j][:, i, epoch] = sample_wise_accuracy
+
+        replay_buffer_X_list, replay_buffer_y_list = replay_buffer_strategy(model, task, replay_buffer_X_list, replay_buffer_y_list, max_replay_buffer_size / (len(train_tasks) - 1))
     
         print(f'Results after training on task {i + 1}')
 
-        # # randomize all weights hehe
-        # for layer in model.modules():
-        #     if hasattr(layer, 'reset_parameters'):
-        #         layer.reset_parameters()
-        #     else:
-        #         for param in layer.parameters(recurse=False):
-        #             if param.requires_grad:
-        #                 init.uniform_(param, -0.1, 0.1)
-
         with torch.no_grad():
             for i, task_test in enumerate(test_tasks):
-                test_loss, test_accuracy, _ = evaluate(model, task_test, criterion, metric, unique_labels[i])
+                test_loss, test_accuracy, _ = evaluate(model, task_test, criterion, device, metric, unique_labels[i])
                 # pdb.set_trace()
 
                 task_test_losses[i].append(test_loss)
@@ -98,43 +116,13 @@ def training_loop(
 
     return task_test_losses, task_test_accuracies, epoch_wise_classification_matrices
 
-# Define the evaluation metric
-def accuracy(output: torch.Tensor, target: torch.Tensor, available_targets: list[int]) -> float:
-    # mask output to only consider the classes present in the target
-    output_masked = -torch.inf * torch.ones_like(output)
-    output_masked[:, available_targets] = output[:, available_targets]
-    acc = (output_masked.argmax(dim=1) == target).float()
-    return acc.mean().item(), acc
-
-# Define the evaluation function
-def evaluate(model: torch.nn.Module, evaluation_loader: torch.utils.data.DataLoader, criterion: torch.nn.Module, metric: Callable[[float], float], unique_labels: list[str]) -> tuple[float, float]:
-    model.eval()
-    test_loss = 0
-    test_accuracy = 0
-
-    sample_wise_accuracy = torch.zeros(len(evaluation_loader.dataset)).to(device)
-
-    with torch.no_grad():
-        for inputs, labels, indices in evaluation_loader:
-            inputs, labels = inputs.to(device), labels.to(device)
-            outputs = model(inputs)
-            test_loss += criterion(outputs, labels).item()
-            
-            batch_metric_agg, sample_wise_metric = metric(outputs, labels, unique_labels)
-
-            test_accuracy += batch_metric_agg
-
-            sample_wise_accuracy[indices] = sample_wise_metric
-
-    test_loss /= len(evaluation_loader)
-    test_accuracy /= len(evaluation_loader)
-
-    return test_loss, test_accuracy, sample_wise_accuracy
 
 
 if __name__ == "__main__":
+    fix_seed(42)
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("--n", action="store", type=int, default=5, help="Number of tasks")
+    parser.add_argument("--n", action="store", type=int, default=2, help="Number of tasks")
     parser.add_argument("--epochs", action="store", type=int, default=10, help="Number of epochs")
     parser.add_argument("--wandb", action="store_true")
     parser.add_argument("--classes", action="store", type=int, default=10, help="Number of classes")
@@ -143,12 +131,7 @@ if __name__ == "__main__":
     n = args.n
     epochs_per_task = args.epochs
     num_classes = args.classes
-    
-    seed = 42
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.mps.is_available() else "cpu")
     print(f"Using device: {device}")
     
@@ -163,66 +146,21 @@ if __name__ == "__main__":
     batch_size = 64
     num_checkpoints = 5
 
-    train_tasks = []
-    test_tasks = []
-
-    unique_labels = []
-
-    for i in range(1, n + 1):
-        with open(f"../data/cifar-{num_classes}-{n}/train/task_{i}", "rb") as f:
-            task_train, task_labels, unique_task_labels = pickle.load(f)
-
-        with open(f"../data/cifar-{num_classes}-{n}/test/task_{i}", "rb") as f:
-            task_test, task_test_labels, _ = pickle.load(f)
-
-        unique_labels.append(unique_task_labels)
-
-        task_train_tensor = torch.tensor(task_train, dtype=torch.float32)
-        task_test_tensor = torch.tensor(task_test, dtype=torch.float32)
-
-        task_train_tensor = task_train_tensor / 255.0 
-        task_test_tensor = task_test_tensor / 255.0 
-
-        mean = torch.tensor([0.5, 0.5, 0.5], dtype=torch.float32).view(1, 3, 1, 1)
-        std = torch.tensor([0.5, 0.5, 0.5], dtype=torch.float32).view(1, 3, 1, 1)
-
-        task_train_tensor = (task_train_tensor - mean) / std
-        task_test_tensor = (task_test_tensor - mean) / std
-
-        train_tasks.append(
-            DataLoader(
-                TensorDataset(
-                    task_train_tensor,
-                    torch.tensor(task_labels, dtype=torch.long, device=device),
-                    torch.arange(len(task_labels), device=device), # this is to keep track of the order of the samples
-                ),
-                batch_size=batch_size,
-                shuffle=True,
-            )
-        )
-        test_tasks.append(
-            DataLoader(
-                TensorDataset(
-                    task_test_tensor,
-                    torch.tensor(task_test_labels, dtype=torch.long, device=device),
-                    torch.arange(len(task_test_labels), device=device),
-                ),
-                batch_size=batch_size,
-                shuffle=False,
-            )
-        )
+    train_tasks, test_tasks, unique_labels = preprocess_cifar(num_classes, n, batch_size, device)
 
     task_test_losses, task_test_accuracies, epoch_wise_classification_matrices = training_loop(
-        train_tasks,
-        test_tasks,
-        unique_labels,
-        model,
-        optimizer,
-        criterion,
-        accuracy,
-        evaluate,
-        epochs_per_task,
-        num_checkpoints,
+        train_tasks=train_tasks,
+        test_tasks=test_tasks,
+        unique_labels=unique_labels,
+        model=model,
+        optimizer=optimizer,
+        criterion=criterion,
+        device=device,
+        metric=accuracy,
+        evaluate=evaluate,
+        replay_buffer_strategy=uniform_replay_buffer,
+        max_replay_buffer_size=5000,
+        epochs_per_task=epochs_per_task,
     )
 
     wandb.finish()
@@ -235,6 +173,9 @@ if __name__ == "__main__":
         plt.plot(np.arange(len(train_tasks) * epochs_per_task), np.concatenate(task_progression, axis=0), label=f'Task {i+1}')
 
     plt.legend()
+
+    if not os.path.exists('../img/'):
+        os.mkdir('../img')
 
     if not os.path.exists('../img/task_progression'):
         os.mkdir('../img/task_progression')
