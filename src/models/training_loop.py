@@ -5,6 +5,10 @@ from tqdm import tqdm
 from torch import nn
 import wandb
 import numpy as np
+import pdb
+
+from metrics.vog import compute_VoG, visualize_VoG
+
 
 def training_loop(
         train_tasks: list[torch.utils.data.DataLoader], 
@@ -19,6 +23,7 @@ def training_loop(
         replay_buffer_strategy: Optional[Callable[[torch.nn.Module, torch.utils.data.DataLoader, list[torch.Tensor], list[torch.Tensor], int], tuple[list[torch.Tensor], list[torch.Tensor]]]],
         max_replay_buffer_size: int,
         epochs_per_task: int,
+        num_checkpoints : int
     ) -> list[float]:
     """
     The function trains the model on each of the different tasks sequentially using continual learning and uses a replay buffer to store the data from the previous tasks.
@@ -41,8 +46,14 @@ def training_loop(
 
     for i, task in enumerate(train_tasks):
         print(f'Training on task {i + 1}')
+        vog_data = {
+            "gradient_matrices" : [], # container for storing gradients
+            "checkpoints" : np.linspace(0, epochs_per_task, num_checkpoints, endpoint=False, dtype=np.int32), # iterations at which to store gradients
+            "input_data" : map(torch.cat, zip(*[(img, labels) for img, labels, _ in task])) # stores input images and labels
+        }
 
         for epoch in tqdm(range(epochs_per_task)):
+            grad_matrices_epoch = [] # stores gradients for this epoch
             replay_buffer = None
 
             if replay_buffer_strategy and len(replay_buffer_X_list):
@@ -63,22 +74,32 @@ def training_loop(
                         inputs = torch.cat([inputs, replay_inputs], dim=0)
                         labels = torch.cat([labels, replay_labels], dim=0)
 
-                        inputs.requires_grad_()
+                inputs.requires_grad_()
 
                 inputs = inputs.to(device)
                 labels = labels.to(device)
 
                 optimizer.zero_grad()
+                inputs.retain_grad() # for VoG
                 outputs = model(inputs)
                 loss = criterion(outputs, labels)
                 loss.backward()
+                if epoch in vog_data["checkpoints"]:
+                    pixel_grads = inputs.grad.mean(axis=1)
+                    grad_matrices_epoch.append(pixel_grads.clone())
                 optimizer.step()
                 wandb.log({f"train-loss_task-{i}": loss})
+            if epoch in vog_data["checkpoints"]:
+                vog_data["gradient_matrices"].append(torch.concat(grad_matrices_epoch, axis=0))
 
             for j, task_train in enumerate(train_tasks):
                 _, _, sample_wise_accuracy = evaluate(model, task_train, criterion, device, metric, unique_labels[j])
 
                 epoch_wise_classification_matrices[j][:, i, epoch] = sample_wise_accuracy
+
+        grad_variances = compute_VoG(vog_data)
+        input_images, labels = map(torch.cat, zip(*[(img, labels) for img, labels, _ in task]))
+        visualize_VoG(grad_variances, input_images, labels)
 
         if replay_buffer_strategy:
             replay_buffer_X_list, replay_buffer_y_list = replay_buffer_strategy(model, task, replay_buffer_X_list, replay_buffer_y_list, max_replay_buffer_size / (len(train_tasks) - 1))
@@ -88,7 +109,6 @@ def training_loop(
         with torch.no_grad():
             for i, task_test in enumerate(test_tasks):
                 test_loss, test_accuracy, _ = evaluate(model, task_test, criterion, device, metric, unique_labels[i])
-                # pdb.set_trace()
 
                 task_test_losses[i].append(test_loss)
                 task_test_accuracies[i].append(test_accuracy)

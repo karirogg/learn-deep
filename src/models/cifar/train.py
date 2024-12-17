@@ -44,7 +44,7 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
     criterion = torch.nn.CrossEntropyLoss()
 
-    batch_size = 64
+    batch_size = 4 * 64
     num_checkpoints = 5
 
     train_tasks, test_tasks, unique_labels = preprocess_cifar(num_classes, n, batch_size, device)
@@ -67,6 +67,7 @@ if __name__ == "__main__":
         replay_buffer_strategy=replay_buffer_strategy,
         max_replay_buffer_size=5000,
         epochs_per_task=epochs_per_task,
+        num_checkpoints=num_checkpoints
     )
 
     wandb.finish()
