@@ -44,7 +44,7 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
     criterion = torch.nn.CrossEntropyLoss()
 
-    batch_size = 4 * 64
+    batch_size = 100
     num_checkpoints = 5
 
     train_tasks, test_tasks, unique_labels = preprocess_cifar(num_classes, n, batch_size, device)

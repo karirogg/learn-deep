@@ -85,7 +85,7 @@ def training_loop(
                 loss = criterion(outputs, labels)
                 loss.backward()
                 if epoch in vog_data["checkpoints"]:
-                    pixel_grads = inputs.grad.mean(axis=1)
+                    pixel_grads = inputs.grad[:task.batch_size].mean(axis=1)
                     grad_matrices_epoch.append(pixel_grads.clone())
                 optimizer.step()
                 wandb.log({f"train-loss_task-{i}": loss})
