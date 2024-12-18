@@ -36,7 +36,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.mps.is_available() else "cpu")
     print(f"Using device: {device}")
     
-    model_config = {"num_classes" : 10}
+    model_config = {"num_classes" : num_classes}
     model = CIFAR_CNN(cfg=model_config)
     model = model.to(device)
     wandb.init(project="learn-deep", config=model_config, mode="online" if args.wandb else "disabled")
