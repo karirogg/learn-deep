@@ -4,8 +4,9 @@ import os
 import torch
 import wandb
 import numpy as np
+import pdb
 
-from replay_buffers.uniform_replay_buffer import uniform_replay_buffer
+from replay_buffers.replay import Replay
 
 from models.cifar.accuracy import accuracy
 from models.cifar.evaluate import evaluate
@@ -51,8 +52,14 @@ if __name__ == "__main__":
 
     replay_buffer_strategy = None
 
-    if args.replay_buffer == "uniform":
-        replay_buffer_strategy = uniform_replay_buffer
+    replay_params = {"remove_lower_percent" : 20, "remove_upper_percent" : 20}
+    replay = Replay(replay_params)
+    replay_strategies = {"uniform" : replay.uniform, "simple_sorted" : replay.simple_sorted}
+    replay_buffer_strategy = replay_strategies.get(args.replay_buffer, None)
+    if replay_buffer_strategy:
+        print(args.replay_buffer)
+    else:
+        print("WARNING: no valid replay strategy provided - running without")
 
     task_test_losses, task_test_accuracies, epoch_wise_classification_matrices = training_loop(
         train_tasks=train_tasks,

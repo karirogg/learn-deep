@@ -8,6 +8,7 @@ import numpy as np
 import pdb
 
 from metrics.vog import compute_VoG, visualize_VoG
+from metrics.learning_speed import calculate_learning_speed
 
 
 def training_loop(
@@ -100,9 +101,12 @@ def training_loop(
         grad_variances = compute_VoG(vog_data)
         input_images, labels = map(torch.cat, zip(*[(img, labels) for img, labels, _ in task]))
         visualize_VoG(grad_variances, input_images, labels)
+        learning_speeds = calculate_learning_speed(epoch_wise_classification_matrices)
+        pdb.set_trace()
 
         if replay_buffer_strategy:
-            replay_buffer_X_list, replay_buffer_y_list = replay_buffer_strategy(model, task, replay_buffer_X_list, replay_buffer_y_list, max_replay_buffer_size / (len(train_tasks) - 1))
+            metrics = {"vog" : torch.hstack(grad_variances), "learning_speeds" : learning_speeds}
+            replay_buffer_X_list, replay_buffer_y_list = replay_buffer_strategy(model, task, replay_buffer_X_list, replay_buffer_y_list, metrics, max_replay_buffer_size / (len(train_tasks) - 1))
     
         print(f'Results after training on task {i + 1}')
 
