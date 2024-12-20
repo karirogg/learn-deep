@@ -13,6 +13,7 @@ from models.cifar.evaluate import evaluate
 from models.cifar.task_preprocessing import preprocess_cifar
 from models.training_loop import training_loop
 from models.custom_cnn import CIFAR_CNN
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 # from metrics.vog import compute_VoG, visualize_VoG
 
@@ -28,7 +29,7 @@ if __name__ == "__main__":
     parser.add_argument("--wandb", action="store_true")
     parser.add_argument("--classes", action="store", type=int, default=10, help="Number of classes")
     parser.add_argument("--replay-buffer", action="store", type=str, default=None, help="Replay buffer strategy")
-    
+
     args = parser.parse_args()
     n = args.n
     epochs_per_task = args.epochs
@@ -36,16 +37,25 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.mps.is_available() else "cpu")
     print(f"Using device: {device}")
-    
+
     model_config = {"num_classes" : num_classes}
-    model = CIFAR_CNN(cfg=model_config)
+
+    model = torch.hub.load("pytorch/vision:v0.10.0", "squeezenet1_1", pretrained=False)
+    model.features[0] = torch.nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1)
+    model.features[2] = torch.nn.MaxPool2d(kernel_size=2, stride=1, ceil_mode=True)
+    model.features[5] = torch.nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=True)
+    model.features[8] = torch.nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=True)
+    model.classifier[1] = torch.nn.Conv2d(512, num_classes, kernel_size=1)
     model = model.to(device)
     wandb.init(project="learn-deep", config=model_config, mode="online" if args.wandb else "disabled")
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
+    optimizer = torch.optim.SGD(
+        model.parameters(), lr=0.02, momentum=0.9, weight_decay=4e-4
+    )
+    scheduler = CosineAnnealingLR(optimizer, T_max=epochs_per_task)
     criterion = torch.nn.CrossEntropyLoss()
 
-    batch_size = 100
+    batch_size = 128
     num_checkpoints = 5
 
     train_tasks, test_tasks, unique_labels = preprocess_cifar(num_classes, n, batch_size, device)

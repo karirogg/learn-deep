@@ -12,20 +12,42 @@ from metrics.learning_speed import calculate_learning_speed
 
 
 def training_loop(
-        train_tasks: list[torch.utils.data.DataLoader], 
-        test_tasks: list[torch.utils.data.DataLoader], 
-        unique_labels: list[list[int]],
-        model: torch.nn.Module, 
-        optimizer: torch.optim.Optimizer, 
-        criterion: torch.nn.Module, 
-        device: torch.device,
-        metric: Callable[[float], float],
-        evaluate: Callable[[torch.nn.Module, torch.utils.data.DataLoader, torch.nn.Module, torch.device, Callable[[float], float], list[str]], tuple[float, float]],
-        replay_buffer_strategy: Optional[Callable[[torch.nn.Module, torch.utils.data.DataLoader, list[torch.Tensor], list[torch.Tensor], int], tuple[list[torch.Tensor], list[torch.Tensor]]]],
-        max_replay_buffer_size: int,
-        epochs_per_task: int,
-        num_checkpoints : int
-    ) -> list[float]:
+    train_tasks: list[torch.utils.data.DataLoader],
+    test_tasks: list[torch.utils.data.DataLoader],
+    unique_labels: list[list[int]],
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+    scheduler: torch.optim.lr_scheduler._LRScheduler,
+    criterion: torch.nn.Module,
+    device: torch.device,
+    metric: Callable[[float], float],
+    evaluate: Callable[
+        [
+            torch.nn.Module,
+            torch.utils.data.DataLoader,
+            torch.nn.Module,
+            torch.device,
+            Callable[[float], float],
+            list[str],
+        ],
+        tuple[float, float],
+    ],
+    replay_buffer_strategy: Optional[
+        Callable[
+            [
+                torch.nn.Module,
+                torch.utils.data.DataLoader,
+                list[torch.Tensor],
+                list[torch.Tensor],
+                int,
+            ],
+            tuple[list[torch.Tensor], list[torch.Tensor]],
+        ]
+    ],
+    max_replay_buffer_size: int,
+    epochs_per_task: int,
+    num_checkpoints: int,
+) -> list[float]:
     """
     The function trains the model on each of the different tasks sequentially using continual learning and uses a replay buffer to store the data from the previous tasks.
     """
@@ -37,6 +59,9 @@ def training_loop(
     task_test_accuracies = []
 
     epoch_wise_classification_matrices = []
+
+    optimizer_initial_state = optimizer.state_dict()
+    scheduler_initial_state = scheduler.state_dict()
 
     for task in train_tasks:
         task_test_losses.append([])
@@ -98,6 +123,8 @@ def training_loop(
 
                 epoch_wise_classification_matrices[j][:, i, epoch] = sample_wise_accuracy
 
+            scheduler.step()
+
         grad_variances = compute_VoG(vog_data)
         input_images, labels = map(torch.cat, zip(*[(img, labels) for img, labels, _ in task]))
         visualize_VoG(grad_variances, input_images, labels)
@@ -107,7 +134,7 @@ def training_loop(
         if replay_buffer_strategy:
             metrics = {"vog" : torch.hstack(grad_variances), "learning_speeds" : learning_speeds}
             replay_buffer_X_list, replay_buffer_y_list = replay_buffer_strategy(model, task, replay_buffer_X_list, replay_buffer_y_list, metrics, max_replay_buffer_size / (len(train_tasks) - 1))
-    
+
         print(f'Results after training on task {i + 1}')
 
         with torch.no_grad():
@@ -121,5 +148,9 @@ def training_loop(
 
                 print(f'Task {i+1} test loss: {test_loss}')
                 print(f'Task {i+1} test accuracy: {test_accuracy}')
+
+        # Reset optimizer and scheduler for training on the next task
+        optimizer.load_state_dict(optimizer_initial_state)
+        scheduler.load_state_dict(scheduler_initial_state)
 
     return task_test_losses, task_test_accuracies, epoch_wise_classification_matrices
