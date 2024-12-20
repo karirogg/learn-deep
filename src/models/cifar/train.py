@@ -71,20 +71,23 @@ if __name__ == "__main__":
     else:
         print("WARNING: no valid replay strategy provided - running without")
 
-    task_test_losses, task_test_accuracies, epoch_wise_classification_matrices = training_loop(
-        train_tasks=train_tasks,
-        test_tasks=test_tasks,
-        unique_labels=unique_labels,
-        model=model,
-        optimizer=optimizer,
-        criterion=criterion,
-        device=device,
-        metric=accuracy,
-        evaluate=evaluate,
-        replay_buffer_strategy=replay_buffer_strategy,
-        max_replay_buffer_size=5000,
-        epochs_per_task=epochs_per_task,
-        num_checkpoints=num_checkpoints
+    task_test_losses, task_test_accuracies, epoch_wise_classification_matrices = (
+        training_loop(
+            train_tasks=train_tasks,
+            test_tasks=test_tasks,
+            unique_labels=unique_labels,
+            model=model,
+            optimizer=optimizer,
+            scheduler=scheduler,
+            criterion=criterion,
+            device=device,
+            metric=accuracy,
+            evaluate=evaluate,
+            replay_buffer_strategy=replay_buffer_strategy,
+            max_replay_buffer_size=5000,
+            epochs_per_task=epochs_per_task,
+            num_checkpoints=num_checkpoints,
+        )
     )
 
     wandb.finish()
