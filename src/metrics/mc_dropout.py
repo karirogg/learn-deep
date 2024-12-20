@@ -23,12 +23,11 @@ def mc_dropout_inference(
                     outputs = torch.nn.functional.softmax(outputs, dim=1)
                 batch_predictions.append(outputs)
 
-            batch_predictions = torch.stack(batch_predictions)
+            batch_predictions = torch.stack(batch_predictions, dim=0)
             all_predictions.append(batch_predictions)
 
-    all_predictions = torch.stack(
-        all_predictions, dim=1
-    )  # [num_samples, num_examples, num_classes]
+    # [num_samples, num_examples, num_classes]
+    all_predictions = torch.cat(all_predictions, dim=1)
 
     mean_predictions = all_predictions.mean(dim=0)
     variances = all_predictions.var(dim=0)
