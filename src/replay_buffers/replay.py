@@ -30,13 +30,13 @@ class Replay:
 
         return X_list, y_list
     
-    def simple_sorted(self, model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, X_list: list[torch.tensor], y_list: list[torch.tensor], metrics, samples_to_add: int = 10000):
+    def simple_sorted(self, model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, X_list: list[torch.tensor], y_list: list[torch.tensor], metrics, samples_to_add: int = 10000, vog_weight=0.5):
         print("populating replay buffer...", end= " ")
         # collect inputs
         input_images, labels = map(torch.cat, zip(*[(img, labels) for img, labels, _ in dataloader]))
         input_images = input_images.detach().to(torch.float32)
         # select indices
-        sorted_idcs = sorted(torch.arange(labels.shape[0]), key=lambda i : metrics["vog"][i])
+        sorted_idcs = sorted(torch.arange(labels.shape[0]), key=lambda i : vog_weight * metrics["vog"][i] + (1-vog_weight) * metrics["learning_speeds"][i])
         lower_boundary = self.params["remove_lower_percent"] * len(sorted_idcs) // 100
         upper_boundary = len(sorted_idcs) - self.params["remove_upper_percent"] * len(sorted_idcs) // 100
         filtered_idcs = sorted_idcs[lower_boundary:upper_boundary]

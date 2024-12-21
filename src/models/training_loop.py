@@ -88,6 +88,7 @@ def training_loop(
             for inputs, labels, _ in task:
                 replay_inputs = None
                 replay_labels = None
+                input_length = inputs.shape[0]
 
                 if replay_buffer_strategy and len(replay_buffer_X_list):
                     try:
@@ -111,7 +112,7 @@ def training_loop(
                 loss = criterion(outputs, labels)
                 loss.backward()
                 if epoch in vog_data["checkpoints"]:
-                    pixel_grads = inputs.grad[:task.batch_size].mean(axis=1)
+                    pixel_grads = inputs.grad[:input_length].mean(axis=1)
                     grad_matrices_epoch.append(pixel_grads.clone())
                 optimizer.step()
                 wandb.log({f"train-loss_task-{i}": loss})
@@ -129,25 +130,24 @@ def training_loop(
         input_images, labels = map(torch.cat, zip(*[(img, labels) for img, labels, _ in task]))
         visualize_VoG(grad_variances, input_images, labels)
         learning_speeds = calculate_learning_speed(epoch_wise_classification_matrices)
-        pdb.set_trace()
 
         if replay_buffer_strategy:
-            metrics = {"vog" : torch.hstack(grad_variances), "learning_speeds" : learning_speeds}
+            metrics = {"vog" : torch.hstack(grad_variances), "learning_speeds" : learning_speeds[i][:labels.shape[0]]}
             replay_buffer_X_list, replay_buffer_y_list = replay_buffer_strategy(model, task, replay_buffer_X_list, replay_buffer_y_list, metrics, max_replay_buffer_size / (len(train_tasks) - 1))
 
         print(f'Results after training on task {i + 1}')
 
         with torch.no_grad():
-            for i, task_test in enumerate(test_tasks):
-                test_loss, test_accuracy, _ = evaluate(model, task_test, criterion, device, metric, unique_labels[i])
+            for j, task_test in enumerate(test_tasks):
+                test_loss, test_accuracy, _ = evaluate(model, task_test, criterion, device, metric, unique_labels[j])
 
-                task_test_losses[i].append(test_loss)
-                task_test_accuracies[i].append(test_accuracy)
+                task_test_losses[j].append(test_loss)
+                task_test_accuracies[j].append(test_accuracy)
                 # wandb.log({f"test-loss_task-{i}": test_loss})
-                wandb.log({f"test-accuracy_task-{i}": test_accuracy})
+                wandb.log({f"test-accuracy_task-{j}": test_accuracy})
 
-                print(f'Task {i+1} test loss: {test_loss}')
-                print(f'Task {i+1} test accuracy: {test_accuracy}')
+                print(f'Task {j+1} test loss: {test_loss}')
+                print(f'Task {j+1} test accuracy: {test_accuracy}')
 
         # Reset optimizer and scheduler for training on the next task
         optimizer.load_state_dict(optimizer_initial_state)

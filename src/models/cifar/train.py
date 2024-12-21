@@ -67,7 +67,7 @@ if __name__ == "__main__":
     replay_strategies = {"uniform" : replay.uniform, "simple_sorted" : replay.simple_sorted}
     replay_buffer_strategy = replay_strategies.get(args.replay_buffer, None)
     if replay_buffer_strategy:
-        print(args.replay_buffer)
+        print("running with replay strategy:", args.replay_buffer)
     else:
         print("WARNING: no valid replay strategy provided - running without")
 
@@ -92,6 +92,7 @@ if __name__ == "__main__":
 
     wandb.finish()
 
+    print("creating plots...")
     for i, task in enumerate(train_tasks):
         task_progression = []
         for j in range(len(train_tasks)):
@@ -128,6 +129,8 @@ if __name__ == "__main__":
         plt.imshow(concat_task_progression.cpu().numpy(), cmap='cividis', interpolation='nearest', aspect='auto')
 
         plt.savefig(f'../img/heatmaps/cifar_{num_classes}_n_{n}_task_{i+1}_epochs_{epochs_per_task}.png')
+
+    print("done")
 
     for i, (losses, accuracies) in enumerate(
         zip(task_test_losses, task_test_accuracies)
