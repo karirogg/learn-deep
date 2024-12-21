@@ -60,9 +60,6 @@ def training_loop(
 
     epoch_wise_classification_matrices = []
 
-    optimizer_initial_state = optimizer.state_dict()
-    scheduler_initial_state = scheduler.state_dict()
-
     for task in train_tasks:
         task_test_losses.append([])
         task_test_accuracies.append([])
@@ -148,9 +145,5 @@ def training_loop(
 
                 print(f'Task {j+1} test loss: {test_loss}')
                 print(f'Task {j+1} test accuracy: {test_accuracy}')
-
-        # Reset optimizer and scheduler for training on the next task
-        optimizer.load_state_dict(optimizer_initial_state)
-        scheduler.load_state_dict(scheduler_initial_state)
 
     return task_test_losses, task_test_accuracies, epoch_wise_classification_matrices

@@ -7,13 +7,13 @@ import numpy as np
 import pdb
 
 from replay_buffers.replay import Replay
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from models.cifar.accuracy import accuracy
 from models.cifar.evaluate import evaluate
 from models.cifar.task_preprocessing import preprocess_cifar
 from models.training_loop import training_loop
 from models.custom_cnn import CIFAR_CNN
-from torch.optim.lr_scheduler import CosineAnnealingLR
 
 # from metrics.vog import compute_VoG, visualize_VoG
 
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     optimizer = torch.optim.SGD(
         model.parameters(), lr=0.02, momentum=0.9, weight_decay=4e-4
     )
-    scheduler = CosineAnnealingLR(optimizer, T_max=epochs_per_task)
+    scheduler = CosineAnnealingLR(optimizer, T_max=epochs_per_task * n)
     criterion = torch.nn.CrossEntropyLoss()
 
     batch_size = 128
