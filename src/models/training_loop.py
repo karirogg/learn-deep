@@ -105,8 +105,10 @@ def training_loop(
 
                 optimizer.zero_grad()
                 inputs.retain_grad() # for VoG
-                outputs = model(inputs)
-                loss = criterion(outputs, labels)
+                outputs = model(inputs, i)
+
+                remapped_labels = labels - i * outputs.size(1)
+                loss = criterion(outputs, remapped_labels)
                 loss.backward()
                 if epoch in vog_data["checkpoints"]:
                     pixel_grads = inputs.grad[:input_length].mean(axis=1)
