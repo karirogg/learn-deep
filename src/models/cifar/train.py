@@ -43,10 +43,14 @@ if __name__ == "__main__":
     model = Task_IL_SqueezeNet(num_classes_per_task=num_classes / n, num_tasks=n)
     wandb.init(project="learn-deep", config=model_config, mode="online" if args.wandb else "disabled")
 
-    optimizer = torch.optim.SGD(
-        model.parameters(), lr=0.02, momentum=0.9, weight_decay=4e-4
-    )
-    scheduler = CosineAnnealingLR(optimizer, T_max=epochs_per_task * n)
+    # TODO: Possibly use lower learning rate
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+
+    # TODO: After we have verified that task incremental learning works well, we will want to use SGD with momentum and a scheduler
+    # optimizer = torch.optim.SGD(
+    #    model.parameters(), lr=0.02, momentum=0.9, weight_decay=4e-4
+    # )
+    # scheduler = CosineAnnealingLR(optimizer, T_max=epochs_per_task * n)
     criterion = torch.nn.CrossEntropyLoss()
 
     batch_size = 128
@@ -72,7 +76,7 @@ if __name__ == "__main__":
             unique_labels=unique_labels,
             model=model,
             optimizer=optimizer,
-            scheduler=scheduler,
+            # scheduler=scheduler,
             criterion=criterion,
             device=device,
             metric=accuracy,

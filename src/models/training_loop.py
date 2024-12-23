@@ -17,7 +17,7 @@ def training_loop(
     unique_labels: list[list[int]],
     model: torch.nn.Module,
     optimizer: torch.optim.Optimizer,
-    scheduler: torch.optim.lr_scheduler._LRScheduler,
+    # scheduler: torch.optim.lr_scheduler._LRScheduler,
     criterion: torch.nn.Module,
     device: torch.device,
     metric: Callable[[float], float],
@@ -67,8 +67,8 @@ def training_loop(
         task_classification_matrix = torch.zeros((len(task.dataset), len(train_tasks), epochs_per_task))
         epoch_wise_classification_matrices.append(task_classification_matrix)
 
-    for i, task in enumerate(train_tasks):
-        print(f'Training on task {i + 1}')
+    for task_id, task in enumerate(train_tasks):
+        print(f"Training on task {task_id + 1}")
         vog_data = {
             "gradient_matrices" : [], # container for storing gradients
             "checkpoints" : np.linspace(0, epochs_per_task, num_checkpoints, endpoint=False, dtype=np.int32), # iterations at which to store gradients
@@ -104,26 +104,32 @@ def training_loop(
                 labels = labels.to(device)
 
                 optimizer.zero_grad()
-                inputs.retain_grad() # for VoG
-                outputs = model(inputs, i)
+                inputs.retain_grad()  # for VoG
 
-                remapped_labels = labels - i * outputs.size(1)
+                # TODO: We need to adjust model predictions and labels everywhere else in the code in the same way
+                outputs = model(inputs, task_id)
+                class_start = task_id * outputs.size(1)
+                remapped_labels = labels - class_start
+
                 loss = criterion(outputs, remapped_labels)
                 loss.backward()
+
                 if epoch in vog_data["checkpoints"]:
                     pixel_grads = inputs.grad[:input_length].mean(axis=1)
                     grad_matrices_epoch.append(pixel_grads.clone())
                 optimizer.step()
-                wandb.log({f"train-loss_task-{i}": loss})
+                wandb.log({f"train-loss_task-{task_id}": loss})
             if epoch in vog_data["checkpoints"]:
                 vog_data["gradient_matrices"].append(torch.concat(grad_matrices_epoch, axis=0))
 
             for j, task_train in enumerate(train_tasks):
                 _, _, sample_wise_accuracy = evaluate(model, task_train, criterion, device, metric, unique_labels[j])
 
-                epoch_wise_classification_matrices[j][:, i, epoch] = sample_wise_accuracy
+                epoch_wise_classification_matrices[j][
+                    :, task_id, epoch
+                ] = sample_wise_accuracy
 
-            scheduler.step()
+            # scheduler.step()
 
         grad_variances = compute_VoG(vog_data)
         input_images, labels = map(torch.cat, zip(*[(img, labels) for img, labels, _ in task]))
@@ -131,10 +137,13 @@ def training_loop(
         learning_speeds = calculate_learning_speed(epoch_wise_classification_matrices)
 
         if replay_buffer_strategy:
-            metrics = {"vog" : torch.hstack(grad_variances), "learning_speeds" : learning_speeds[i][:labels.shape[0]]}
+            metrics = {
+                "vog": torch.hstack(grad_variances),
+                "learning_speeds": learning_speeds[task_id][: labels.shape[0]],
+            }
             replay_buffer_X_list, replay_buffer_y_list = replay_buffer_strategy(model, task, replay_buffer_X_list, replay_buffer_y_list, metrics, max_replay_buffer_size / (len(train_tasks) - 1))
 
-        print(f'Results after training on task {i + 1}')
+        print(f"Results after training on task {task_id + 1}")
 
         with torch.no_grad():
             for j, task_test in enumerate(test_tasks):
@@ -142,7 +151,7 @@ def training_loop(
 
                 task_test_losses[j].append(test_loss)
                 task_test_accuracies[j].append(test_accuracy)
-                # wandb.log({f"test-loss_task-{i}": test_loss})
+                # wandb.log({f"test-loss_task-{task_id}": test_loss})
                 wandb.log({f"test-accuracy_task-{j}": test_accuracy})
 
                 print(f'Task {j+1} test loss: {test_loss}')
