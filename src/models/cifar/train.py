@@ -13,7 +13,7 @@ from models.cifar.accuracy import accuracy
 from models.cifar.evaluate import evaluate
 from models.cifar.task_preprocessing import preprocess_cifar
 from models.training_loop import training_loop
-from models.custom_cnn import CIFAR_CNN
+from models.TIL_squeezenet import Task_IL_SqueezeNet
 
 # from metrics.vog import compute_VoG, visualize_VoG
 
@@ -40,25 +40,25 @@ if __name__ == "__main__":
 
     model_config = {"num_classes" : num_classes}
 
-    model = torch.hub.load("pytorch/vision:v0.10.0", "squeezenet1_1", pretrained=False)
-    model.features[0] = torch.nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1)
-    model.features[2] = torch.nn.MaxPool2d(kernel_size=2, stride=1, ceil_mode=True)
-    model.features[5] = torch.nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=True)
-    model.features[8] = torch.nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=True)
-    model.classifier[1] = torch.nn.Conv2d(512, num_classes, kernel_size=1)
-    model = model.to(device)
+    model = Task_IL_SqueezeNet(num_classes_per_task = int(num_classes / n), num_tasks=n)
+    model.to(device)
+
     wandb.init(project="learn-deep", config=model_config, mode="online" if args.wandb else "disabled")
 
-    optimizer = torch.optim.SGD(
-        model.parameters(), lr=0.02, momentum=0.9, weight_decay=4e-4
-    )
-    scheduler = CosineAnnealingLR(optimizer, T_max=epochs_per_task * n)
+    # TODO: Possibly use lower learning rate
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+
+    # TODO: After we have verified that task incremental learning works well, we will want to use SGD with momentum and a scheduler
+    # optimizer = torch.optim.SGD(
+    #    model.parameters(), lr=0.02, momentum=0.9, weight_decay=4e-4
+    # )
+    # scheduler = CosineAnnealingLR(optimizer, T_max=epochs_per_task * n)
     criterion = torch.nn.CrossEntropyLoss()
 
     batch_size = 128
     num_checkpoints = 5
 
-    train_tasks, test_tasks, unique_labels = preprocess_cifar(num_classes, n, batch_size, device)
+    train_tasks, test_tasks = preprocess_cifar(num_classes, n, batch_size, device)
 
     replay_buffer_strategy = None
 
@@ -75,10 +75,9 @@ if __name__ == "__main__":
         training_loop(
             train_tasks=train_tasks,
             test_tasks=test_tasks,
-            unique_labels=unique_labels,
             model=model,
             optimizer=optimizer,
-            scheduler=scheduler,
+            # scheduler=scheduler,
             criterion=criterion,
             device=device,
             metric=accuracy,

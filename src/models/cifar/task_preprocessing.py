@@ -6,16 +6,12 @@ def preprocess_cifar(num_classes: int, n: int, batch_size: int, device: torch.de
     train_tasks = []
     test_tasks = []
 
-    unique_labels = []
-
     for i in range(1, n + 1):
         with open(f"../data/cifar-{num_classes}-{n}/train/task_{i}", "rb") as f:
-            task_train, task_labels, unique_task_labels = pickle.load(f)
+            task_train, task_labels = pickle.load(f)
 
         with open(f"../data/cifar-{num_classes}-{n}/test/task_{i}", "rb") as f:
-            task_test, task_test_labels, _ = pickle.load(f)
-
-        unique_labels.append(unique_task_labels)
+            task_test, task_test_labels = pickle.load(f)
 
         task_train_tensor = torch.tensor(task_train, dtype=torch.float32)
         task_test_tensor = torch.tensor(task_test, dtype=torch.float32)
@@ -52,4 +48,4 @@ def preprocess_cifar(num_classes: int, n: int, batch_size: int, device: torch.de
             )
         )
 
-    return train_tasks, test_tasks, unique_labels
+    return train_tasks, test_tasks
