@@ -81,6 +81,8 @@ class Task_IL_SqueezeNet(nn.Module):
 
     def forward(self, x: torch.Tensor, task_id: int) -> torch.Tensor:
         assert 0 <= task_id < self.num_tasks, f"Invalid task_id: {task_id}"
+
         x = self.features(x)
         x = self.task_classifiers[task_id](x)
+
         return torch.flatten(x, 1)

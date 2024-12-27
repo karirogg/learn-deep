@@ -14,7 +14,6 @@ from metrics.learning_speed import calculate_learning_speed
 def training_loop(
     train_tasks: list[torch.utils.data.DataLoader],
     test_tasks: list[torch.utils.data.DataLoader],
-    unique_labels: list[list[int]],
     model: torch.nn.Module,
     optimizer: torch.optim.Optimizer,
     # scheduler: torch.optim.lr_scheduler._LRScheduler,
@@ -106,12 +105,9 @@ def training_loop(
                 optimizer.zero_grad()
                 inputs.retain_grad()  # for VoG
 
-                # TODO: We need to adjust model predictions and labels everywhere else in the code in the same way
                 outputs = model(inputs, task_id)
-                class_start = task_id * outputs.size(1)
-                remapped_labels = labels - class_start
 
-                loss = criterion(outputs, remapped_labels)
+                loss = criterion(outputs, labels)
                 loss.backward()
 
                 if epoch in vog_data["checkpoints"]:
@@ -123,7 +119,7 @@ def training_loop(
                 vog_data["gradient_matrices"].append(torch.concat(grad_matrices_epoch, axis=0))
 
             for j, task_train in enumerate(train_tasks):
-                _, _, sample_wise_accuracy = evaluate(model, task_train, criterion, device, metric, unique_labels[j])
+                _, _, sample_wise_accuracy = evaluate(model, task_train, criterion, device, metric, j)
 
                 epoch_wise_classification_matrices[j][
                     :, task_id, epoch
@@ -147,7 +143,7 @@ def training_loop(
 
         with torch.no_grad():
             for j, task_test in enumerate(test_tasks):
-                test_loss, test_accuracy, _ = evaluate(model, task_test, criterion, device, metric, unique_labels[j])
+                test_loss, test_accuracy, _ = evaluate(model, task_test, criterion, device, metric, j)
 
                 task_test_losses[j].append(test_loss)
                 task_test_accuracies[j].append(test_accuracy)

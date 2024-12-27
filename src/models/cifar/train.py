@@ -40,7 +40,9 @@ if __name__ == "__main__":
 
     model_config = {"num_classes" : num_classes}
 
-    model = Task_IL_SqueezeNet(num_classes_per_task=num_classes / n, num_tasks=n)
+    model = Task_IL_SqueezeNet(num_classes_per_task = int(num_classes / n), num_tasks=n)
+    model.to(device)
+
     wandb.init(project="learn-deep", config=model_config, mode="online" if args.wandb else "disabled")
 
     # TODO: Possibly use lower learning rate
@@ -56,7 +58,7 @@ if __name__ == "__main__":
     batch_size = 128
     num_checkpoints = 5
 
-    train_tasks, test_tasks, unique_labels = preprocess_cifar(num_classes, n, batch_size, device)
+    train_tasks, test_tasks = preprocess_cifar(num_classes, n, batch_size, device)
 
     replay_buffer_strategy = None
 
@@ -73,7 +75,6 @@ if __name__ == "__main__":
         training_loop(
             train_tasks=train_tasks,
             test_tasks=test_tasks,
-            unique_labels=unique_labels,
             model=model,
             optimizer=optimizer,
             # scheduler=scheduler,

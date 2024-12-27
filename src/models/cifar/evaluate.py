@@ -1,7 +1,7 @@
 import torch
 from typing import Callable
 
-def evaluate(model: torch.nn.Module, evaluation_loader: torch.utils.data.DataLoader, criterion: torch.nn.Module, device: torch.device, metric: Callable[[float], float], unique_labels: list[str]) -> tuple[float, float]:
+def evaluate(model: torch.nn.Module, evaluation_loader: torch.utils.data.DataLoader, criterion: torch.nn.Module, device: torch.device, metric: Callable[[float], float], task_id: int) -> tuple[float, float]:
     model.eval()
     test_loss = 0
     test_accuracy = 0
@@ -11,10 +11,10 @@ def evaluate(model: torch.nn.Module, evaluation_loader: torch.utils.data.DataLoa
     with torch.no_grad():
         for inputs, labels, indices in evaluation_loader:
             inputs, labels = inputs.to(device), labels.to(device)
-            outputs = model(inputs)
+            outputs = model(inputs, task_id)
             test_loss += criterion(outputs, labels).item()
             
-            batch_metric_agg, sample_wise_metric = metric(outputs, labels, unique_labels)
+            batch_metric_agg, sample_wise_metric = metric(outputs, labels)
 
             test_accuracy += batch_metric_agg
 
