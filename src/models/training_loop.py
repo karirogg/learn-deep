@@ -7,6 +7,8 @@ import wandb
 import numpy as np
 import pdb
 
+from replay_buffers.replay import Replay
+
 from metrics.vog import compute_VoG, visualize_VoG
 from metrics.learning_speed import calculate_learning_speed
 
@@ -31,17 +33,8 @@ def training_loop(
         ],
         tuple[float, float],
     ],
-    replay_buffer_strategy: Optional[
-        Callable[
-            [
-                torch.nn.Module,
-                torch.utils.data.DataLoader,
-                list[torch.Tensor],
-                list[torch.Tensor],
-                int,
-            ],
-            tuple[list[torch.Tensor], list[torch.Tensor]],
-        ]
+    replay_buffer: Optional[
+        Replay
     ],
     max_replay_buffer_size: int,
     epochs_per_task: int,
@@ -76,43 +69,43 @@ def training_loop(
 
         for epoch in tqdm(range(epochs_per_task)):
             grad_matrices_epoch = [] # stores gradients for this epoch
-            replay_buffer = None
-
-            if replay_buffer_strategy and len(replay_buffer_X_list):
-                replay_buffer = iter(DataLoader(TensorDataset(torch.cat(replay_buffer_X_list, dim=0), torch.cat(replay_buffer_y_list, dim=0)), batch_size=8, shuffle=True))
+            replay_buffer.reset()
 
             for inputs, labels, _ in task:
-                replay_inputs = None
-                replay_labels = None
                 input_length = inputs.shape[0]
-
-                if replay_buffer_strategy and len(replay_buffer_X_list):
-                    try:
-                        replay_inputs, replay_labels = next(replay_buffer)
-                    except StopIteration:
-                        replay_buffer = iter(DataLoader(TensorDataset(torch.cat(replay_buffer_X_list, dim=0), torch.cat(replay_buffer_y_list, dim=0), batch_size=8, shuffle=True)))
-                        replay_inputs, replay_labels = next(replay_buffer)
-
-                    if replay_inputs is not None:
-                        inputs = torch.cat([inputs, replay_inputs], dim=0)
-                        labels = torch.cat([labels, replay_labels], dim=0)
-
-                inputs.requires_grad_()
-
+                
                 inputs = inputs.to(device)
                 labels = labels.to(device)
+
+                replay_inputs = replay_buffer.sample()
+
+                replay_inputs[task_id] = (inputs, labels)
+
+
+                inputs.requires_grad_()
 
                 optimizer.zero_grad()
                 inputs.retain_grad()  # for VoG
 
-                outputs = model(inputs, task_id)
+                loss = 0
 
-                loss = criterion(outputs, labels)
+                for i, (inp, lab) in enumerate(replay_inputs):
+                    if inp is None:
+                        continue
+
+                    inp = inp.to(device)
+                    lab = lab.to(device)
+
+                    outputs = model(inp, i)
+
+                    loss += criterion(outputs, lab)
+
                 loss.backward()
 
                 if epoch in vog_data["checkpoints"]:
                     pixel_grads = inputs.grad[:input_length].mean(axis=1)
                     grad_matrices_epoch.append(pixel_grads.clone())
+
                 optimizer.step()
                 wandb.log({f"train-loss_task-{task_id}": loss})
             if epoch in vog_data["checkpoints"]:
@@ -132,12 +125,13 @@ def training_loop(
         visualize_VoG(grad_variances, input_images, labels)
         learning_speeds = calculate_learning_speed(epoch_wise_classification_matrices)
 
-        if replay_buffer_strategy:
+        if replay_buffer.strategy is not None:
             metrics = {
                 "vog": torch.hstack(grad_variances),
                 "learning_speeds": learning_speeds[task_id][: labels.shape[0]],
             }
-            replay_buffer_X_list, replay_buffer_y_list = replay_buffer_strategy(model, task, replay_buffer_X_list, replay_buffer_y_list, metrics, max_replay_buffer_size / (len(train_tasks) - 1))
+
+            replay_buffer.strategy(model, task, task_id, metrics, max_replay_buffer_size / (len(train_tasks) - 1))
 
         print(f"Results after training on task {task_id + 1}")
 

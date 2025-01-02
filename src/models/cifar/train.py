@@ -13,7 +13,7 @@ from models.cifar.accuracy import accuracy
 from models.cifar.evaluate import evaluate
 from models.cifar.task_preprocessing import preprocess_cifar
 from models.training_loop import training_loop
-from models.TIL_squeezenet import Task_IL_SqueezeNet
+from models.cifar.TIL_squeezenet import Task_IL_SqueezeNet
 
 # from metrics.vog import compute_VoG, visualize_VoG
 
@@ -56,17 +56,15 @@ if __name__ == "__main__":
     criterion = torch.nn.CrossEntropyLoss()
 
     batch_size = 128
+    replay_batch_size = 8
     num_checkpoints = 5
 
     train_tasks, test_tasks = preprocess_cifar(num_classes, n, batch_size, device)
 
-    replay_buffer_strategy = None
-
     replay_params = {"remove_lower_percent" : 20, "remove_upper_percent" : 20}
-    replay = Replay(replay_params)
-    replay_strategies = {"uniform" : replay.uniform, "simple_sorted" : replay.simple_sorted}
-    replay_buffer_strategy = replay_strategies.get(args.replay_buffer, None)
-    if replay_buffer_strategy:
+    replay_buffer = Replay(replay_params, strategy=args.replay_buffer, batch_size=replay_batch_size, num_tasks=n)
+    
+    if args.replay_buffer:
         print("running with replay strategy:", args.replay_buffer)
     else:
         print("WARNING: no valid replay strategy provided - running without")
@@ -82,7 +80,7 @@ if __name__ == "__main__":
             device=device,
             metric=accuracy,
             evaluate=evaluate,
-            replay_buffer_strategy=replay_buffer_strategy,
+            replay_buffer=replay_buffer,
             max_replay_buffer_size=5000,
             epochs_per_task=epochs_per_task,
             num_checkpoints=num_checkpoints,
@@ -92,6 +90,8 @@ if __name__ == "__main__":
     wandb.finish()
 
     print("creating plots...")
+    task_name = f'cifar_{num_classes}_n_{n}_epochs_{epochs_per_task}_replay_{args.replay_buffer}'
+
     for i, task in enumerate(train_tasks):
         task_progression = []
         for j in range(len(train_tasks)):
@@ -114,7 +114,7 @@ if __name__ == "__main__":
     plt.xlim(0, len(train_tasks) * epochs_per_task)
     plt.ylim(0, 1)
 
-    plt.savefig(f'../img/task_progression/cifar_{num_classes}_n_{n}_epochs_{epochs_per_task}.png')
+    plt.savefig(f'../img/task_progression/{task_name}.png')
     plt.close()
 
     for i, task in enumerate(train_tasks):
@@ -127,7 +127,7 @@ if __name__ == "__main__":
         plt.figure(figsize=(5 * n, 5))
         plt.imshow(concat_task_progression.cpu().numpy(), cmap='cividis', interpolation='nearest', aspect='auto')
 
-        plt.savefig(f'../img/heatmaps/cifar_{num_classes}_n_{n}_task_{i+1}_epochs_{epochs_per_task}.png')
+        plt.savefig(f'../img/heatmaps/{task_name}.png')
 
     print("done")
 
