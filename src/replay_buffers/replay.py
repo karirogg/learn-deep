@@ -80,7 +80,7 @@ class Replay:
         input_images = input_images.detach().to(torch.float32)
         # sort by metrics
         sorted_idcs_vog = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics["vog"][i]))
-        sorted_idcs_learning_speed = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics["learning_speeds"][i]))
+        sorted_idcs_learning_speed = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics["learning_speeds"][i]), reversed=True) # reverse since hard samples have lowest learning speed but highes VoG
         idcs_sum = vog_weight * sorted_idcs_vog + (1-vog_weight) * sorted_idcs_learning_speed
         _, mapped_idcs = torch.unique(idcs_sum, sorted=True, return_inverse=True) # map indices back to the correct interval after summing 
         sorted_idcs = mapped_idcs.argsort()
