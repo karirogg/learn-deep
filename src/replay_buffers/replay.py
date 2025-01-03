@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from torch.utils.data import DataLoader, TensorDataset
+import pdb
 
 class Replay:
 
@@ -77,9 +78,13 @@ class Replay:
         # collect inputs
         input_images, labels = map(torch.cat, zip(*[(img, labels) for img, labels, _ in dataloader]))
         input_images = input_images.detach().to(torch.float32)
-
+        # sort by metrics
+        sorted_idcs_vog = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics["vog"][i]))
+        sorted_idcs_learning_speed = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics["learning_speeds"][i]))
+        idcs_sum = vog_weight * sorted_idcs_vog + (1-vog_weight) * sorted_idcs_learning_speed
+        _, mapped_idcs = torch.unique(idcs_sum, sorted=True, return_inverse=True) # map indices back to the correct interval after summing 
+        sorted_idcs = mapped_idcs.argsort()
         # select indices
-        sorted_idcs = sorted(torch.arange(labels.shape[0]), key=lambda i : vog_weight * metrics["vog"][i] + (1-vog_weight) * metrics["learning_speeds"][i])
         lower_boundary = self.params["remove_lower_percent"] * len(sorted_idcs) // 100
         upper_boundary = len(sorted_idcs) - self.params["remove_upper_percent"] * len(sorted_idcs) // 100
         filtered_idcs = sorted_idcs[lower_boundary:upper_boundary]
