@@ -3,7 +3,7 @@ import pandas as pd
 
 
 def mc_dropout_inference(
-    model, dataloader, device, num_samples=100, classification=True
+    model, dataloader, task_id, device, num_samples=100, classification=True
 ):
     """
     Perform MC Dropout inference over a dataloader to compute mean, variances and uncertainty measures of predictions.
@@ -18,7 +18,9 @@ def mc_dropout_inference(
             batch_predictions = []
 
             for _ in range(num_samples):
-                outputs = model(inputs)  # [batch_size, num_classes/output_dim]
+                outputs = model(
+                    inputs, task_id
+                )  # [batch_size, num_classes_per_task/output_dim]
                 if classification:
                     outputs = torch.nn.functional.softmax(outputs, dim=1)
                 batch_predictions.append(outputs)
