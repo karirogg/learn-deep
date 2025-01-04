@@ -9,6 +9,9 @@ def compute_VoG(vog_data):
     gradient_matrices = vog_data["gradient_matrices"]
     _, epoch_labels = vog_data["input_data"]
     checkpoints = vog_data["checkpoints"]
+    if len(checkpoints) > len(np.unique(checkpoints)):
+        print("WARNING: not enough epochs to compute VoG -> returning 0s")            
+        return [torch.zeros_like(epoch_labels[epoch_labels == l]) for l in epoch_labels.unique()]
     # calculate VoG
     gradient_matrices = torch.stack(gradient_matrices, axis=0)
     grad_means = torch.mean(gradient_matrices, axis=0)
@@ -23,6 +26,8 @@ def compute_VoG(vog_data):
     return normalised_grad_variances
 
 def visualize_VoG(grad_variances, input_images, labels, num_imgs=10):
+    if torch.hstack(grad_variances).sum() == 0:
+        return # just return if VoG computation failed
     input_images = input_images.to(labels.device)
     for i, l in enumerate(labels.unique()):
         _, top_idcs = torch.topk(grad_variances[i], k=num_imgs, largest=True, sorted=False)
