@@ -25,7 +25,7 @@ with open(f'../raw_data/cifar-100-python/test', 'rb') as fo:
     test_data = batch[b'data'].reshape(-1, 3, 32, 32)
     test_labels = np.array(batch[b'fine_labels']).reshape(-1)
 
-tasks = cifar_n(data, labels, n = 2)
+tasks = cifar_n(data, labels, n)
 test_tasks = cifar_n(test_data, test_labels, n)
 
 if not os.path.exists('../data'):

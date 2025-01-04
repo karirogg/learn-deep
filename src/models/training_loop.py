@@ -91,7 +91,7 @@ def training_loop(
                 loss = 0
 
                 for i, (inp, lab) in enumerate(replay_inputs):
-                    if inp is None:
+                    if inp is None or len(inp) == 0:
                         continue
 
                     inp = inp.to(device)
@@ -125,7 +125,7 @@ def training_loop(
         mc_dropout_df = mc_dropout_inference(model, task, task_id, device, replay_buffer.weights, num_samples=100, classification=True)
         grad_variances = compute_VoG(vog_data)
         input_images, labels = map(torch.cat, zip(*[(img, labels) for img, labels, _ in task]))
-        visualize_VoG(grad_variances, input_images, labels)
+        # visualize_VoG(grad_variances, input_images, labels)
         learning_speeds = calculate_learning_speed(epoch_wise_classification_matrices)
 
         if replay_buffer.strategy is not None:
