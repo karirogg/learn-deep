@@ -15,8 +15,8 @@ import numpy as np
 # # concat data
 # ewf_data = pd.concat(ewf_data)
 
-ewf_data = pd.read_csv('../data/ewf-raw/wf1.csv')
-ewf_test_data = pd.read_csv('../data/ewf-raw/wf2.csv')
+ewf_data = pd.read_csv('../ewf-raw/wf1.csv')
+ewf_test_data = pd.read_csv('../ewf-raw/wf2.csv')
 
 # only include the first year in the data
 ewf_data = ewf_data[ewf_data['Time'].str[:4] == '0000']
