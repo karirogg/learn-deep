@@ -90,7 +90,7 @@ def training_loop(
                 loss = 0
 
                 for i, (inp, lab) in enumerate(replay_inputs):
-                    if inp is None:
+                    if inp is None or len(inp) == 0:
                         continue
 
                     inp = inp.to(device)
@@ -120,14 +120,14 @@ def training_loop(
 
             # scheduler.step()
 
-        grad_variances = compute_VoG(vog_data)
+        # grad_variances = compute_VoG(vog_data)
         input_images, labels = map(torch.cat, zip(*[(img, labels) for img, labels, _ in task]))
-        visualize_VoG(grad_variances, input_images, labels)
+        # visualize_VoG(grad_variances, input_images, labels)
         learning_speeds = calculate_learning_speed(epoch_wise_classification_matrices)
 
         if replay_buffer.strategy is not None:
             metrics = {
-                "vog": torch.hstack(grad_variances),
+                # "vog": torch.hstack(grad_variances),
                 "learning_speeds": learning_speeds[task_id][: labels.shape[0]],
             }
 

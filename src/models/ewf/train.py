@@ -5,42 +5,42 @@ import torch
 import wandb
 import numpy as np
 import pdb
+import pickle
 
 from replay_buffers.replay import Replay
 from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.utils.data import DataLoader, TensorDataset
 
-from models.cifar.accuracy import accuracy
+from models.ewf.mse import mse
 from models.cifar.evaluate import evaluate
-from models.cifar.task_preprocessing import preprocess_cifar
+from models.ewf.til_nn import TaskILNN
+
 from models.training_loop import training_loop
-from models.cifar.TIL_squeezenet import Task_IL_SqueezeNet
 
 # from metrics.vog import compute_VoG, visualize_VoG
 
 from utils.fix_seed import fix_seed
 
+
 if __name__ == "__main__":
     fix_seed(42)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--n", action="store", type=int, default=2, help="Number of tasks")
     parser.add_argument("--epochs", action="store", type=int, default=10, help="Number of epochs")
     parser.add_argument("--wandb", action="store_true")
-    parser.add_argument("--classes", action="store", type=int, default=10, help="Number of classes")
     parser.add_argument("--replay-buffer", action="store", type=str, default=None, help="Replay buffer strategy")
 
     args = parser.parse_args()
-    n = args.n
+    n = 4
     epochs_per_task = args.epochs
-    num_classes = args.classes
 
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.mps.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    model_config = {"num_classes" : num_classes}
-
-    model = Task_IL_SqueezeNet(num_classes_per_task = int(num_classes / n), num_tasks=n)
+    model = TaskILNN(num_tasks=n)
     model.to(device)
+
+    model_config = {"dataset" : 'EuropeWindFarm'}
 
     wandb.init(project="learn-deep", config=model_config, mode="online" if args.wandb else "disabled")
 
@@ -52,14 +52,53 @@ if __name__ == "__main__":
     #    model.parameters(), lr=0.02, momentum=0.9, weight_decay=4e-4
     # )
     # scheduler = CosineAnnealingLR(optimizer, T_max=epochs_per_task * n)
-
-    criterion = torch.nn.CrossEntropyLoss()
+    
+    criterion = torch.nn.MSELoss()
 
     batch_size = 128
     replay_batch_size = 8
     num_checkpoints = 5
 
-    train_tasks, test_tasks = preprocess_cifar(num_classes, n, batch_size, device)
+    train_tasks = []
+    test_tasks = []
+
+    for i in range(1, n+1):
+        with open(f'../data/ewf/train/task_{i}', 'rb') as f:
+            task_X, task_y = pickle.load(f)
+
+            task_train_tensor = torch.tensor(task_X, dtype=torch.float32)
+            task_labels = torch.tensor(task_y, dtype=torch.float32)
+
+            train_tasks.append(
+                DataLoader(
+                    TensorDataset(
+                        task_train_tensor,
+                        task_labels,
+                        torch.arange(len(task_labels), device=device), # this is to keep track of the order of the samples
+                    ),
+                    batch_size=batch_size,
+                    shuffle=True,
+                )
+            )
+
+        with open(f'../data/ewf/test/task_{i}', 'rb') as f:
+            task_X, task_y = pickle.load(f)
+
+            task_test_tensor = torch.tensor(task_X, dtype=torch.float32)
+            task_test_labels = torch.tensor(task_y, dtype=torch.float32)
+
+            test_tasks.append(
+                DataLoader(
+                    TensorDataset(
+                        task_test_tensor,
+                        task_test_labels,
+                        torch.arange(len(task_test_labels), device=device),
+                    ),
+                    batch_size=batch_size,
+                    shuffle=False,
+                )
+            )
+
 
     replay_params = {"remove_lower_percent" : 20, "remove_upper_percent" : 20}
     replay_buffer = Replay(replay_params, strategy=args.replay_buffer, batch_size=replay_batch_size, num_tasks=n)
@@ -78,7 +117,7 @@ if __name__ == "__main__":
             # scheduler=scheduler,
             criterion=criterion,
             device=device,
-            metric=accuracy,
+            metric=mse,
             evaluate=evaluate,
             replay_buffer=replay_buffer,
             max_replay_buffer_size=5000,
@@ -90,7 +129,7 @@ if __name__ == "__main__":
     wandb.finish()
 
     print("creating plots...")
-    task_name = f'cifar_{num_classes}_n_{n}_epochs_{epochs_per_task}_replay_{args.replay_buffer}'
+    task_name = f'ewf_epochs_{epochs_per_task}_replay_{args.replay_buffer}'
 
     for i, task in enumerate(train_tasks):
         task_progression = []
@@ -109,10 +148,9 @@ if __name__ == "__main__":
         os.mkdir('../img/heatmaps')
 
     plt.xlabel('Epoch')
-    plt.ylabel('Classification Accuracy')
+    plt.ylabel('MSE')
 
     plt.xlim(0, len(train_tasks) * epochs_per_task)
-    plt.ylim(0, 1)
 
     plt.savefig(f'../img/task_progression/{task_name}.png')
     plt.close()
