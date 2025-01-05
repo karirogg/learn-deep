@@ -34,6 +34,7 @@ for seed in "${seeds[@]}"; do
             "mc_mutual_information": 0.0,
             "mc_variation_ratio": 0.0,
             "mc_mean_std": 0.0,
+            "mc_variance": 0.0,
             ($w): 1.0
         }')
 
