@@ -3,6 +3,7 @@ import pandas as pd
 import pdb
 from tqdm import tqdm
 import time
+import numpy as np
 
 
 def mc_dropout_inference(
@@ -14,11 +15,11 @@ def mc_dropout_inference(
     if weights == {} or weights["mc_entropy"] + weights["mc_mutual_information"] + weights["mc_variation_ratio"] + weights["mc_mean_std"] == 0:
         df = pd.DataFrame(
             {
-                "Predicted_Class": torch.zeros(len(dataloader.dataset)),
-                "Predictive_Entropy": torch.zeros(len(dataloader.dataset)),
-                "Mutual_Information": torch.zeros(len(dataloader.dataset)),
-                "Variation_Ratio": torch.zeros(len(dataloader.dataset)),
-                "Mean_Std_Deviation": torch.zeros(len(dataloader.dataset)),
+                "Predicted_Class": np.zeros(len(dataloader.dataset)),
+                "Predictive_Entropy": np.zeros(len(dataloader.dataset)),
+                "Mutual_Information": np.zeros(len(dataloader.dataset)),
+                "Variation_Ratio": np.zeros(len(dataloader.dataset)),
+                "Mean_Std_Deviation": np.zeros(len(dataloader.dataset)),
             }
         )
         return df
@@ -64,11 +65,11 @@ def mc_dropout_inference(
 
         df = pd.DataFrame(
             {
-                "Predicted_Class": predicted_class,
-                "Predictive_Entropy": predictive_entropy,
-                "Mutual_Information": mutual_information,
-                "Variation_Ratio": variation_ratio,
-                "Mean_Std_Deviation": mean_std_deviation,
+                "Predicted_Class": predicted_class.cpu().numpy(),
+                "Predictive_Entropy": predictive_entropy.cpu().numpy(),
+                "Mutual_Information": mutual_information.cpu().numpy(),
+                "Variation_Ratio": variation_ratio.cpu().numpy(),
+                "Mean_Std_Deviation": mean_std_deviation.cpu().numpy(),
             }
         )
         return df
