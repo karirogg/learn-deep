@@ -11,6 +11,7 @@ from replay_buffers.replay import Replay
 
 from metrics.vog import compute_VoG, visualize_VoG
 from metrics.learning_speed import calculate_learning_speed
+from metrics.mc_dropout import mc_dropout_inference
 
 
 def training_loop(
@@ -120,18 +121,24 @@ def training_loop(
 
             # scheduler.step()
 
-        # grad_variances = compute_VoG(vog_data)
-        input_images, labels = map(torch.cat, zip(*[(img, labels) for img, labels, _ in task]))
-        # visualize_VoG(grad_variances, input_images, labels)
-        learning_speeds = calculate_learning_speed(epoch_wise_classification_matrices)
+        if task_id < len(train_tasks)-1:
+            mc_dropout_df = mc_dropout_inference(model, task, task_id, device, replay_buffer.weights, num_samples=100, classification=True)
+            grad_variances = compute_VoG(vog_data)
+            input_images, labels = map(torch.cat, zip(*[(img, labels) for img, labels, _ in task]))
+            visualize_VoG(grad_variances, input_images, labels)
+            learning_speeds = calculate_learning_speed(epoch_wise_classification_matrices)
 
-        if replay_buffer.strategy is not None:
-            metrics = {
-                # "vog": torch.hstack(grad_variances),
-                "learning_speeds": learning_speeds[task_id][: labels.shape[0]],
-            }
+            if replay_buffer.strategy is not None:
+                metrics = {
+                    "vog": torch.hstack(grad_variances),
+                    "learning_speed": learning_speeds[task_id][: labels.shape[0]],
+                    "mc_entropy" : torch.tensor(mc_dropout_df["Predictive_Entropy"].values),
+                    "mc_mutual_information" : torch.tensor(mc_dropout_df["Mutual_Information"].values),
+                    "mc_variation_ratio" : torch.tensor(mc_dropout_df["Variation_Ratio"].values),
+                    "mc_mean_std" : torch.tensor(mc_dropout_df["Mean_Std_Deviation"].values),
+                }
 
-            replay_buffer.strategy(model, task, task_id, metrics, max_replay_buffer_size / (len(train_tasks) - 1))
+                replay_buffer.strategy(model, task, task_id, metrics, max_replay_buffer_size / (len(train_tasks) - 1))
 
         print(f"Results after training on task {task_id + 1}")
 

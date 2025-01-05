@@ -5,7 +5,7 @@ import pdb
 
 class Replay:
 
-    def __init__(self, params=None, strategy=None, batch_size=8, num_tasks=2, weights={"vog" : 0.0, "learning_speed": 0.0, "mc_entropy" : 1.0}):
+    def __init__(self, params=None, strategy=None, batch_size=8, num_tasks=2, weights={}):
         self.params = params
 
         self.X_list = []
@@ -88,10 +88,13 @@ class Replay:
         input_images, labels = map(torch.cat, zip(*[(img, labels) for img, labels, _ in dataloader]))
         input_images = input_images.detach().to(torch.float32)
         # sort by metrics
-        sorted_idcs_vog = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics["vog"][i]))
-        sorted_idcs_learning_speed = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics["learning_speeds"][i], reverse=True)) # reverse since hard samples have lowest learning speed
-        sorted_idcs_mc_entropy = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics["mc_entropy"][i]))
-        idcs_sum = self.weights["vog"] * sorted_idcs_vog + self.weights["learning_speed"] * sorted_idcs_learning_speed + self.weights["mc_entropy"] * sorted_idcs_mc_entropy
+        idcs_sum = 0
+        for metric, weight in self.weights.items():
+            if metric != "learning_speed":
+                sorted_idcs = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics[metric][i]))
+            else:
+                sorted_idcs = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics[metric][i], reverse=True))
+            idcs_sum += weight * sorted_idcs
         _, mapped_idcs = torch.unique(idcs_sum, sorted=True, return_inverse=True) # map indices back to the correct interval after summing 
         sorted_idcs = mapped_idcs.argsort()
         # select indices

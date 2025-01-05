@@ -1,26 +1,39 @@
 import torch
 import pandas as pd
+import pdb
+from tqdm import tqdm
+import time
+import numpy as np
 
 
 def mc_dropout_inference(
-    model, dataloader, task_id, device, num_samples=100, classification=True
+    model, dataloader, task_id, device, weights, num_samples=100, classification=True
 ):
     """
     Perform MC Dropout inference over a dataloader to compute mean, variances and uncertainty measures of predictions.
     """
+    if weights == {} or weights["mc_entropy"] + weights["mc_mutual_information"] + weights["mc_variation_ratio"] + weights["mc_mean_std"] == 0:
+        df = pd.DataFrame(
+            {
+                "Predicted_Class": np.zeros(len(dataloader.dataset)),
+                "Predictive_Entropy": np.zeros(len(dataloader.dataset)),
+                "Mutual_Information": np.zeros(len(dataloader.dataset)),
+                "Variation_Ratio": np.zeros(len(dataloader.dataset)),
+                "Mean_Std_Deviation": np.zeros(len(dataloader.dataset)),
+            }
+        )
+        return df
 
     model.train()   # Enable dropout during inference
     all_predictions = []
 
     with torch.no_grad():
-        for inputs, _ in dataloader:
+        for inputs, _, _ in tqdm(dataloader, desc="collecting mc dropout metric"):
             inputs = inputs.to(device)
             batch_predictions = []
 
             for _ in range(num_samples):
-                outputs = model(
-                    inputs, task_id
-                )  # [batch_size, num_classes_per_task/output_dim]
+                outputs = model(inputs, task_id)  # [batch_size, num_classes/output_dim]
                 if classification:
                     outputs = torch.nn.functional.softmax(outputs, dim=1)
                 batch_predictions.append(outputs)
