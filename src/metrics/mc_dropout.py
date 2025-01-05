@@ -12,7 +12,7 @@ def mc_dropout_inference(
     """
     Perform MC Dropout inference over a dataloader to compute mean, variances and uncertainty measures of predictions.
     """
-    if weights == {} or weights["mc_entropy"] + weights["mc_mutual_information"] + weights["mc_variation_ratio"] + weights["mc_mean_std"] == 0:
+    if classification and (weights == {} or weights["mc_entropy"] + weights["mc_mutual_information"] + weights["mc_variation_ratio"] + weights["mc_mean_std"] == 0):
         df = pd.DataFrame(
             {
                 "Predicted_Class": np.zeros(len(dataloader.dataset)),
@@ -23,6 +23,8 @@ def mc_dropout_inference(
             }
         )
         return df
+    if not classification and (weights == {} or weights["mc_variance"] == 0):
+        return np.zeros(len(dataloader.dataset)), np.zeros(len(dataloader.dataset))
 
     model.train()   # Enable dropout during inference
     all_predictions = []

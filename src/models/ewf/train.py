@@ -5,6 +5,7 @@ import torch
 import wandb
 import numpy as np
 import pdb
+import json
 import pickle
 
 from replay_buffers.replay import Replay
@@ -23,14 +24,16 @@ from utils.fix_seed import fix_seed
 
 
 if __name__ == "__main__":
-    fix_seed(42)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--epochs", action="store", type=int, default=10, help="Number of epochs")
     parser.add_argument("--wandb", action="store_true")
     parser.add_argument("--replay-buffer", action="store", type=str, default=None, help="Replay buffer strategy")
+    parser.add_argument("--replay_weights", type=str, default="{}") # example: --replay_weights '{"vog": 1.0, "learning_speed": 1.0, "mc_entropy": 0.0, "mc_mutual_information": 0.0, "mc_variation_ratio": 0.0, "mc_mean_std": 0.0, "mc_variance": 1.0}' NOTE: all mc_weights except mc_variance should have zero weight for regression
+    parser.add_argument("--seed", type=int, default=42)
 
     args = parser.parse_args()
+    fix_seed(args.seed)
     n = 4
     epochs_per_task = args.epochs
 
@@ -101,7 +104,8 @@ if __name__ == "__main__":
 
 
     replay_params = {"remove_lower_percent" : 20, "remove_upper_percent" : 20}
-    replay_buffer = Replay(replay_params, strategy=args.replay_buffer, batch_size=replay_batch_size, num_tasks=n)
+    replay_weights = json.loads(args.replay_weights)
+    replay_buffer = Replay(replay_params, strategy=args.replay_buffer, batch_size=replay_batch_size, num_tasks=n, weights=replay_weights)
     
     if args.replay_buffer:
         print("running with replay strategy:", args.replay_buffer)
@@ -123,6 +127,7 @@ if __name__ == "__main__":
             max_replay_buffer_size=5000,
             epochs_per_task=epochs_per_task,
             num_checkpoints=num_checkpoints,
+            is_classification=False
         )
     )
 

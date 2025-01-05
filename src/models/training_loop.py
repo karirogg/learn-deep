@@ -40,6 +40,7 @@ def training_loop(
     max_replay_buffer_size: int,
     epochs_per_task: int,
     num_checkpoints: int,
+    is_classification: bool,
 ) -> list[float]:
     """
     The function trains the model on each of the different tasks sequentially using continual learning and uses a replay buffer to store the data from the previous tasks.
@@ -122,21 +123,35 @@ def training_loop(
             # scheduler.step()
 
         if task_id < len(train_tasks)-1:
-            mc_dropout_df = mc_dropout_inference(model, task, task_id, device, replay_buffer.weights, num_samples=100, classification=True)
+            mc_dropout_df = mc_dropout_inference(model, task, task_id, device, replay_buffer.weights, num_samples=100, classification=is_classification)
             grad_variances = compute_VoG(vog_data)
             input_images, labels = map(torch.cat, zip(*[(img, labels) for img, labels, _ in task]))
-            visualize_VoG(grad_variances, input_images, labels)
+            visualize_VoG(grad_variances, input_images, labels) if is_classification else None
             learning_speeds = calculate_learning_speed(epoch_wise_classification_matrices)
 
             if replay_buffer.strategy is not None:
-                metrics = {
-                    "vog": torch.hstack(grad_variances),
-                    "learning_speed": learning_speeds[task_id][: labels.shape[0]],
-                    "mc_entropy" : torch.tensor(mc_dropout_df["Predictive_Entropy"].values),
-                    "mc_mutual_information" : torch.tensor(mc_dropout_df["Mutual_Information"].values),
-                    "mc_variation_ratio" : torch.tensor(mc_dropout_df["Variation_Ratio"].values),
-                    "mc_mean_std" : torch.tensor(mc_dropout_df["Mean_Std_Deviation"].values),
-                }
+                dummy = torch.zeros_like(torch.hstack(grad_variances))
+                if is_classification:
+                    metrics = {
+                        "vog": torch.hstack(grad_variances),
+                        "learning_speed": learning_speeds[task_id][: labels.shape[0]],
+                        "mc_entropy" : torch.tensor(mc_dropout_df["Predictive_Entropy"].values),
+                        "mc_mutual_information" : torch.tensor(mc_dropout_df["Mutual_Information"].values),
+                        "mc_variation_ratio" : torch.tensor(mc_dropout_df["Variation_Ratio"].values),
+                        "mc_mean_std" : torch.tensor(mc_dropout_df["Mean_Std_Deviation"].values),
+                        "mc_variance" : dummy,
+                    }
+                else:
+                    
+                    metrics = {
+                        "vog": torch.hstack(grad_variances),
+                        "learning_speed": learning_speeds[task_id][: labels.shape[0]],
+                        "mc_entropy" : dummy,
+                        "mc_mutual_information" : dummy,
+                        "mc_variation_ratio" : dummy,
+                        "mc_mean_std" : dummy,
+                        "mc_variance" : torch.tensor(mc_dropout_df[1])
+                    }
 
                 replay_buffer.strategy(model, task, task_id, metrics, max_replay_buffer_size / (len(train_tasks) - 1))
 

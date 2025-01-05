@@ -16,13 +16,16 @@ def compute_VoG(vog_data):
     gradient_matrices = torch.stack(gradient_matrices, axis=0)
     grad_means = torch.mean(gradient_matrices, axis=0)
     grad_variances = np.sqrt(1 / len(checkpoints)) * torch.sum(torch.pow(gradient_matrices - grad_means.unsqueeze(0), 2), axis=0)
-    grad_variances = grad_variances.mean(axis=[1, 2]) # average over pixels    
-    # normalise per class
-    normalised_grad_variances = []
-    for l in epoch_labels.unique():
-        class_grad_variances = grad_variances[epoch_labels == l]
-        normalized_class_values = (class_grad_variances - class_grad_variances.mean()).abs() / class_grad_variances.std()
-        normalised_grad_variances.append(normalized_class_values)
+    if grad_variances.dim() > 1: # meaning we are working with CIFAR
+        grad_variances = grad_variances.mean(axis=[1, 2]) # average over pixels 
+        # normalise per class
+        normalised_grad_variances = []
+        for l in epoch_labels.unique():
+            class_grad_variances = grad_variances[epoch_labels == l]
+            normalized_class_values = (class_grad_variances - class_grad_variances.mean()).abs() / class_grad_variances.std()
+            normalised_grad_variances.append(normalized_class_values)
+    else:
+        normalised_grad_variances = [(grad_variances - grad_variances.mean()) / grad_variances.std()]
     return normalised_grad_variances
 
 def visualize_VoG(grad_variances, input_images, labels, num_imgs=10):
