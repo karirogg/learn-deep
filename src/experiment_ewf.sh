@@ -4,7 +4,7 @@
 seeds=(31 42 69 420 80085)
 
 # Replay weight keys
-weights=("vog" "learning_speed" "mc_entropy" "mc_variance")
+weights=("vog" "learning_speed" "mc_variance")
 
 # Output file
 output_file="results.txt"
