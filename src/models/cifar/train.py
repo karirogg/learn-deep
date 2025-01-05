@@ -47,14 +47,8 @@ if __name__ == "__main__":
 
     wandb.init(project="learn-deep", config=model_config, mode="online" if args.wandb else "disabled")
 
-    # TODO: Possibly use lower learning rate
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-
-    # TODO: After we have verified that task incremental learning works well, we will want to use SGD with momentum and a scheduler
-    # optimizer = torch.optim.SGD(
-    #    model.parameters(), lr=0.02, momentum=0.9, weight_decay=4e-4
-    # )
-    # scheduler = CosineAnnealingLR(optimizer, T_max=epochs_per_task * n)
+    # TODO: Possibly optimize further
+    optimizer = torch.optim.Adam(model.parameters(), lr=5e-4, weight_decay=5e-5)
 
     criterion = torch.nn.CrossEntropyLoss()
 
@@ -67,7 +61,7 @@ if __name__ == "__main__":
     replay_params = {"remove_lower_percent" : 20, "remove_upper_percent" : 20}
     replay_weights = json.loads(args.replay_weights)
     replay_buffer = Replay(replay_params, strategy=args.replay_buffer, batch_size=replay_batch_size, num_tasks=n, weights=replay_weights)
-    
+
     if args.replay_buffer:
         print("running with replay strategy:", args.replay_buffer)
     else:
@@ -79,7 +73,6 @@ if __name__ == "__main__":
             test_tasks=test_tasks,
             model=model,
             optimizer=optimizer,
-            # scheduler=scheduler,
             criterion=criterion,
             device=device,
             metric=accuracy,
@@ -88,7 +81,7 @@ if __name__ == "__main__":
             max_replay_buffer_size=5000,
             epochs_per_task=epochs_per_task,
             num_checkpoints=num_checkpoints,
-            is_classification=True
+            is_classification=True,
         )
     )
 

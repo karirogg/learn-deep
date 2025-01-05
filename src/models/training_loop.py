@@ -1,8 +1,6 @@
 import torch
 from typing import Callable, Optional
-from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
-from torch import nn
 import wandb
 import numpy as np
 import pdb
@@ -19,7 +17,6 @@ def training_loop(
     test_tasks: list[torch.utils.data.DataLoader],
     model: torch.nn.Module,
     optimizer: torch.optim.Optimizer,
-    # scheduler: torch.optim.lr_scheduler._LRScheduler,
     criterion: torch.nn.Module,
     device: torch.device,
     metric: Callable[[float], float],
@@ -34,9 +31,7 @@ def training_loop(
         ],
         tuple[float, float],
     ],
-    replay_buffer: Optional[
-        Replay
-    ],
+    replay_buffer: Optional[Replay],
     max_replay_buffer_size: int,
     epochs_per_task: int,
     num_checkpoints: int,
@@ -53,6 +48,7 @@ def training_loop(
     task_test_accuracies = []
 
     epoch_wise_classification_matrices = []
+    frozen = torch.zeros(len(train_tasks), dtype=torch.bool)
 
     for task in train_tasks:
         task_test_losses.append([])
@@ -69,20 +65,24 @@ def training_loop(
             "input_data" : map(torch.cat, zip(*[(img, labels) for img, labels, _ in task])) # stores input images and labels
         }
 
+        if frozen[task_id]:
+            for param in model.task_classifiers[task_id].parameters():
+                param.requires_grad = True  # unfreeze current classification head
+            frozen[task_id] = False
+
         for epoch in tqdm(range(epochs_per_task)):
             grad_matrices_epoch = [] # stores gradients for this epoch
             replay_buffer.reset()
 
             for inputs, labels, _ in task:
                 input_length = inputs.shape[0]
-                
+
                 inputs = inputs.to(device)
                 labels = labels.to(device)
 
                 replay_inputs = replay_buffer.sample()
 
                 replay_inputs[task_id] = (inputs, labels)
-
 
                 inputs.requires_grad_()
 
@@ -93,6 +93,11 @@ def training_loop(
 
                 for i, (inp, lab) in enumerate(replay_inputs):
                     if inp is None or len(inp) == 0:
+                        if not frozen[i]:
+                            # freeze classification head for inactive task
+                            for param in model.task_classifiers[i].parameters():
+                                param.requires_grad = False
+                            frozen[i] = True
                         continue
 
                     inp = inp.to(device)
@@ -120,8 +125,6 @@ def training_loop(
                     :, task_id, epoch
                 ] = sample_wise_accuracy
 
-            # scheduler.step()
-
         if task_id < len(train_tasks)-1:
             mc_dropout_df = mc_dropout_inference(model, task, task_id, device, replay_buffer.weights, num_samples=100, classification=is_classification)
             grad_variances = compute_VoG(vog_data)
@@ -142,7 +145,7 @@ def training_loop(
                         "mc_variance" : dummy,
                     }
                 else:
-                    
+
                     metrics = {
                         "vog": torch.hstack(grad_variances),
                         "learning_speed": learning_speeds[task_id][: labels.shape[0]],
