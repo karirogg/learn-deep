@@ -5,6 +5,7 @@ import wandb
 import numpy as np
 import pdb
 import pickle
+import sys
 
 from replay_buffers.replay import Replay
 
@@ -86,7 +87,7 @@ def training_loop(
                 param.requires_grad = True  # unfreeze current classification head
             frozen[task_id] = False
 
-        for epoch in tqdm(range(epochs_per_task)):
+        for epoch in tqdm(range(epochs_per_task), file=sys.stderr):
             grad_matrices_epoch = [] # stores gradients for this epoch
             replay_buffer.reset()
 
