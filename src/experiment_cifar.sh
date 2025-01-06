@@ -22,6 +22,7 @@ for seed in "${seeds[@]}"; do
         --epochs 50 \
         --replay-buffer uniform \
         --wandb \
+        --store_checkpoint \
         --seed "$seed" >> "$output_file" 2>&1
 
     # Inner loop: Iterate over replay weights
@@ -48,6 +49,7 @@ for seed in "${seeds[@]}"; do
             --replay-buffer simple_sorted \
             --wandb \
             --replay_weights "$replay_weights" \
+            --use_checkpoint \
             --seed "$seed" >> "$output_file" 2>&1
     done
 done

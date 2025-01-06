@@ -31,6 +31,8 @@ if __name__ == "__main__":
     parser.add_argument("--replay-buffer", action="store", type=str, default=None, help="Replay buffer strategy")
     parser.add_argument("--replay_weights", type=str, default="{}") # example: --replay_weights '{"vog": 1.0, "learning_speed": 1.0, "mc_entropy": 0.0, "mc_mutual_information": 0.0, "mc_variation_ratio": 0.0, "mc_mean_std": 0.0, "mc_variance": 1.0}' NOTE: all mc_weights except mc_variance should have zero weight for regression
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--store_checkpoint", action="store_true")
+    parser.add_argument("--use_checkpoint", action="store_true")
 
     args = parser.parse_args()
     fix_seed(args.seed)
@@ -127,7 +129,9 @@ if __name__ == "__main__":
             max_replay_buffer_size=5000,
             epochs_per_task=epochs_per_task,
             num_checkpoints=num_checkpoints,
-            is_classification=False
+            is_classification=False,
+            store_checkpoint=args.store_checkpoint,
+            use_checkpoint=args.use_checkpoint
         )
     )
 

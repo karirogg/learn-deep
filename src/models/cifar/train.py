@@ -30,6 +30,8 @@ if __name__ == "__main__":
     parser.add_argument("--replay-buffer", action="store", type=str, default=None, help="Replay buffer strategy")
     parser.add_argument("--replay_weights", type=str, default="{}") # example: --replay_weights '{"vog": 1.0, "learning_speed": 1.0, "mc_entropy": 1.0, "mc_mutual_information": 1.0, "mc_variation_ratio": 1.0, "mc_mean_std": 1.0, "mc_variance": 0.0}' NOTE: mc_variance should have zero weight for classification
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--store_checkpoint", action="store_true")
+    parser.add_argument("--use_checkpoint", action="store_true")
 
     args = parser.parse_args()
     fix_seed(args.seed)
@@ -82,6 +84,8 @@ if __name__ == "__main__":
             epochs_per_task=epochs_per_task,
             num_checkpoints=num_checkpoints,
             is_classification=True,
+            store_checkpoint=args.store_checkpoint,
+            use_checkpoint=args.use_checkpoint,
         )
     )
 
