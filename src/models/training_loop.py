@@ -41,9 +41,6 @@ def training_loop(
     The function trains the model on each of the different tasks sequentially using continual learning and uses a replay buffer to store the data from the previous tasks.
     """
 
-    replay_buffer_X_list = []
-    replay_buffer_y_list = []
-
     task_test_losses = []
     task_test_accuracies = []
 
@@ -118,8 +115,8 @@ def training_loop(
             if epoch in vog_data["checkpoints"]:
                 vog_data["gradient_matrices"].append(torch.concat(grad_matrices_epoch, axis=0))
 
-            for j, task_train in enumerate(train_tasks):
-                _, _, sample_wise_accuracy = evaluate(model, task_train, criterion, device, metric, j)
+            for j, task_test in enumerate(test_tasks):
+                _, _, sample_wise_accuracy = evaluate(model, task_test, criterion, device, metric, j)
 
                 epoch_wise_classification_matrices[j][
                     :, task_id, epoch

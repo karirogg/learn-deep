@@ -88,7 +88,7 @@ if __name__ == "__main__":
     wandb.finish()
 
     print("creating plots...")
-    task_name = f'cifar_{num_classes}_n_{n}_epochs_{epochs_per_task}_replay_{args.replay_buffer}'
+    task_name = f'cifar_{num_classes}_n_{n}_epochs_{epochs_per_task}_replay_{args.replay_buffer}_seed_{args.seed}'
 
     for i, task in enumerate(train_tasks):
         task_progression = []
