@@ -4,6 +4,8 @@ from tqdm import tqdm
 import wandb
 import numpy as np
 import pdb
+import pickle
+import sys
 
 from replay_buffers.replay import Replay
 
@@ -36,6 +38,8 @@ def training_loop(
     epochs_per_task: int,
     num_checkpoints: int,
     is_classification: bool,
+    store_checkpoint: bool = False,
+    use_checkpoint: bool = False,
 ) -> list[float]:
     """
     The function trains the model on each of the different tasks sequentially using continual learning and uses a replay buffer to store the data from the previous tasks.
@@ -60,6 +64,18 @@ def training_loop(
         epoch_wise_classification_matrices_test.append(task_classification_matrix.clone())
 
     for task_id, task in enumerate(train_tasks):
+        # load model and metrics if training on task 0 has already been done and metrics have been computed (use only for classification) -> task 0 is skipped in this case
+        if task_id == 0 and use_checkpoint:
+            print("WARNING: loading checkpoint from previous run")
+            checkpoint = torch.load('checkpoints/checkpoint.pth')
+            model.load_state_dict(checkpoint['model_state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            with open("checkpoints/metrics.pkl", "rb") as f:
+                metrics = pickle.load(f)
+            replay_buffer.strategy(model, task, task_id, metrics, max_replay_buffer_size / (len(train_tasks) - 1))
+            continue
+        # print(f"State before training on task {task_id}:\nmodel: {model.state_dict}\noptimizer: {optimizer.state_dict}\nmetrics: {metrics}")
+        # start training
         print(f"Training on task {task_id + 1}")
         vog_data = {
             "gradient_matrices" : [], # container for storing gradients
@@ -72,7 +88,7 @@ def training_loop(
                 param.requires_grad = True  # unfreeze current classification head
             frozen[task_id] = False
 
-        for epoch in tqdm(range(epochs_per_task)):
+        for epoch in tqdm(range(epochs_per_task), file=sys.stderr):
             grad_matrices_epoch = [] # stores gradients for this epoch
             replay_buffer.reset()
 
@@ -166,8 +182,18 @@ def training_loop(
                     }
 
                 replay_buffer.strategy(model, task, task_id, metrics, max_replay_buffer_size / (len(train_tasks) - 1))
+        
+                if task_id == 0 and store_checkpoint:
+                    checkpoint = {
+                        'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict()
+                    }
+                    torch.save(checkpoint, 'checkpoints/checkpoint.pth')
+                    with open("checkpoints/metrics.pkl", "wb") as f:
+                        pickle.dump(metrics, f)
+                    print("stored metrics and training checkpoint")
 
-        print(f"Results after training on task {task_id + 1}")
+        print(f"Results after training on task {task_id + 1}")            
 
         with torch.no_grad():
             for j, task_test in enumerate(test_tasks):
