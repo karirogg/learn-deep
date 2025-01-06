@@ -16,13 +16,14 @@ output_file="results.txt"
 for seed in "${seeds[@]}"; do
     echo "Running experiments for seed: $seed" | tee -a "$output_file"
 
-    python -m models.cifar.train \
+    # Force unbuffered output
+    PYTHONUNBUFFERED=1 python -m models.cifar.train \
         --n 2 \
-        --classes 100 \
+        --classes  100 \
         --epochs 50 \
         --replay-buffer uniform \
-        --wandb \
-        --seed "$seed" >> "$output_file" 2>&1
+        --store_checkpoint \
+        --seed "$seed" | tee -a "$output_file"
 
     # Inner loop: Iterate over replay weights
     for weight in "${weights[@]}"; do
@@ -40,14 +41,14 @@ for seed in "${seeds[@]}"; do
 
         echo "Running with replay weight: $weight set to 1.0" | tee -a "$output_file"
 
-        # Run the Python command
-        python -m models.cifar.train \
+        # Force unbuffered output
+        PYTHONUNBUFFERED=1 python -m models.cifar.train \
             --n 2 \
-            --classes 100 \
+            --classes  100 \
             --epochs 50 \
             --replay-buffer simple_sorted \
-            --wandb \
             --replay_weights "$replay_weights" \
-            --seed "$seed" >> "$output_file" 2>&1
+            --use_checkpoint \
+            --seed "$seed" | tee -a "$output_file"
     done
 done

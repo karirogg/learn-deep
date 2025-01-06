@@ -4,6 +4,7 @@ import pdb
 from tqdm import tqdm
 import time
 import numpy as np
+import sys
 
 
 def mc_dropout_inference(
@@ -30,7 +31,7 @@ def mc_dropout_inference(
     all_predictions = []
 
     with torch.no_grad():
-        for inputs, _, _ in tqdm(dataloader, desc="collecting mc dropout metric"):
+        for inputs, _, _ in tqdm(dataloader, desc="collecting mc dropout metric", file=sys.stderr):
             inputs = inputs.to(device)
             batch_predictions = []
 
