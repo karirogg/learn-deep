@@ -45,6 +45,7 @@ def training_loop(
     task_test_accuracies = []
 
     epoch_wise_classification_matrices = []
+    epoch_wise_classification_matrices_test = []
     frozen = torch.zeros(len(train_tasks), dtype=torch.bool)
 
     for task in train_tasks:
@@ -53,6 +54,10 @@ def training_loop(
 
         task_classification_matrix = torch.zeros((len(task.dataset), len(train_tasks), epochs_per_task))
         epoch_wise_classification_matrices.append(task_classification_matrix)
+
+    for task in test_tasks:
+        task_classification_matrix = torch.zeros((len(task.dataset), len(train_tasks), epochs_per_task))
+        epoch_wise_classification_matrices_test.append(task_classification_matrix.clone())
 
     for task_id, task in enumerate(train_tasks):
         print(f"Training on task {task_id + 1}")
@@ -118,6 +123,13 @@ def training_loop(
             for j, task_test in enumerate(test_tasks):
                 _, _, sample_wise_accuracy = evaluate(model, task_test, criterion, device, metric, j)
 
+                epoch_wise_classification_matrices_test[j][
+                    :, task_id, epoch
+                ] = sample_wise_accuracy
+
+            for j, task_train in enumerate(train_tasks):
+                _, _, sample_wise_accuracy = evaluate(model, task_train, criterion, device, metric, j)
+
                 epoch_wise_classification_matrices[j][
                     :, task_id, epoch
                 ] = sample_wise_accuracy
@@ -169,4 +181,4 @@ def training_loop(
                 print(f'Task {j+1} test loss: {test_loss}')
                 print(f'Task {j+1} test accuracy: {test_accuracy}')
 
-    return task_test_losses, task_test_accuracies, epoch_wise_classification_matrices
+    return task_test_losses, task_test_accuracies, epoch_wise_classification_matrices_test
