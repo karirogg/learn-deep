@@ -60,10 +60,11 @@ def training_loop(
         task_classification_matrix = torch.zeros((len(task.dataset), len(train_tasks), epochs_per_task))
         epoch_wise_classification_matrices.append(task_classification_matrix)
 
-    metrics = {}
+    # metrics = {}
     for task_id, task in enumerate(train_tasks):
         # load model and metrics if training on task 0 has already been done and metrics have been computed (use only for classification) -> task 0 is skipped in this case
         if task_id == 0 and use_checkpoint:
+            print("WARNING: loading checkpoint from previous run")
             checkpoint = torch.load('checkpoints/checkpoint.pth')
             model.load_state_dict(checkpoint['model_state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -71,7 +72,7 @@ def training_loop(
                 metrics = pickle.load(f)
             replay_buffer.strategy(model, task, task_id, metrics, max_replay_buffer_size / (len(train_tasks) - 1))
             continue
-        print(f"State before training on task {task_id}:\nmodel: {model.state_dict}\noptimizer: {optimizer.state_dict}\nmetrics: {metrics}")
+        # print(f"State before training on task {task_id}:\nmodel: {model.state_dict}\noptimizer: {optimizer.state_dict}\nmetrics: {metrics}")
         # start training
         print(f"Training on task {task_id + 1}")
         vog_data = {
