@@ -151,10 +151,10 @@ def training_loop(
                 ] = sample_wise_accuracy
 
         if task_id < len(train_tasks)-1:
-            mc_dropout_df = mc_dropout_inference(model, task, task_id, device, replay_buffer.weights, num_samples=100, classification=is_classification)
+            mc_dropout_df = mc_dropout_inference(model, task, task_id, device, replay_buffer.weights, num_samples=100, classification=is_classification, store_checkpoint=store_checkpoint)
             grad_variances = compute_VoG(vog_data)
             input_images, labels = map(torch.cat, zip(*[(img, labels) for img, labels, _ in task]))
-            visualize_VoG(grad_variances, input_images, labels) if is_classification else None
+            # visualize_VoG(grad_variances, input_images, labels) if is_classification else None
             learning_speeds = calculate_learning_speed(epoch_wise_classification_matrices)
 
             if replay_buffer.strategy is not None:

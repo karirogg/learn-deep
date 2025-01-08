@@ -8,24 +8,25 @@ import sys
 
 
 def mc_dropout_inference(
-    model, dataloader, task_id, device, weights, num_samples=100, classification=True
+    model, dataloader, task_id, device, weights, num_samples=100, classification=True, store_checkpoint=False
 ):
     """
     Perform MC Dropout inference over a dataloader to compute mean, variances and uncertainty measures of predictions.
     """
-    if classification and (weights == {} or weights["mc_entropy"] + weights["mc_mutual_information"] + weights["mc_variation_ratio"] + weights["mc_mean_std"] == 0):
-        df = pd.DataFrame(
-            {
-                "Predicted_Class": np.zeros(len(dataloader.dataset)),
-                "Predictive_Entropy": np.zeros(len(dataloader.dataset)),
-                "Mutual_Information": np.zeros(len(dataloader.dataset)),
-                "Variation_Ratio": np.zeros(len(dataloader.dataset)),
-                "Mean_Std_Deviation": np.zeros(len(dataloader.dataset)),
-            }
-        )
-        return df
-    if not classification and (weights == {} or weights["mc_variance"] == 0):
-        return np.zeros(len(dataloader.dataset)), np.zeros(len(dataloader.dataset))
+    if not store_checkpoint: # skip computation if metrics won't be used
+        if classification and (weights == {} or weights["mc_entropy"] + weights["mc_mutual_information"] + weights["mc_variation_ratio"] + weights["mc_mean_std"] == 0):
+            df = pd.DataFrame(
+                {
+                    "Predicted_Class": np.zeros(len(dataloader.dataset)),
+                    "Predictive_Entropy": np.zeros(len(dataloader.dataset)),
+                    "Mutual_Information": np.zeros(len(dataloader.dataset)),
+                    "Variation_Ratio": np.zeros(len(dataloader.dataset)),
+                    "Mean_Std_Deviation": np.zeros(len(dataloader.dataset)),
+                }
+            )
+            return df
+        if not classification and (weights == {} or weights["mc_variance"] == 0):
+            return np.zeros(len(dataloader.dataset)), np.zeros(len(dataloader.dataset))
 
     model.train()   # Enable dropout during inference
     all_predictions = []

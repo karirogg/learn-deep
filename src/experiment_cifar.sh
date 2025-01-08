@@ -19,7 +19,7 @@ for seed in "${seeds[@]}"; do
     # Force unbuffered output
     PYTHONUNBUFFERED=1 python -m models.cifar.train \
         --n 2 \
-        --classes  100 \
+        --classes 100 \
         --epochs 50 \
         --replay-buffer uniform \
         --store_checkpoint \
@@ -44,7 +44,7 @@ for seed in "${seeds[@]}"; do
         # Force unbuffered output
         PYTHONUNBUFFERED=1 python -m models.cifar.train \
             --n 2 \
-            --classes  100 \
+            --classes 100 \
             --epochs 50 \
             --replay-buffer simple_sorted \
             --replay_weights "$replay_weights" \
