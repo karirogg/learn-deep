@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
     batch_size = 128
     replay_batch_size = 8
-    num_checkpoints = 5
+    num_checkpoints = 10
 
     train_tasks, test_tasks = preprocess_cifar(num_classes, n, batch_size, device)
 

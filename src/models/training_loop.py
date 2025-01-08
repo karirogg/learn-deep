@@ -9,7 +9,7 @@ import sys
 
 from replay_buffers.replay import Replay
 
-from metrics.vog import compute_VoG, visualize_VoG
+from metrics.vog import VoG
 from metrics.learning_speed import calculate_learning_speed
 from metrics.mc_dropout import mc_dropout_inference
 
@@ -77,11 +77,7 @@ def training_loop(
         # print(f"State before training on task {task_id}:\nmodel: {model.state_dict}\noptimizer: {optimizer.state_dict}\nmetrics: {metrics}")
         # start training
         print(f"Training on task {task_id + 1}")
-        vog_data = {
-            "gradient_matrices" : [], # container for storing gradients
-            "checkpoints" : np.linspace(0, epochs_per_task, num_checkpoints, endpoint=False, dtype=np.int32), # iterations at which to store gradients
-            "input_data" : map(torch.cat, zip(*[(img, labels) for img, labels, _ in task])) # stores input images and labels
-        }
+        vog = VoG(task, epochs_per_task, num_checkpoints, task_id, is_classification)
 
         if frozen[task_id]:
             for param in model.task_classifiers[task_id].parameters():
@@ -105,7 +101,6 @@ def training_loop(
                 inputs.requires_grad_()
 
                 optimizer.zero_grad()
-                inputs.retain_grad()  # for VoG
 
                 loss = 0
 
@@ -127,15 +122,11 @@ def training_loop(
 
                 loss.backward()
 
-                if epoch in vog_data["checkpoints"]:
-                    pixel_grads = inputs.grad[:input_length].mean(axis=1)
-                    grad_matrices_epoch.append(pixel_grads.clone())
-
                 optimizer.step()
                 wandb.log({f"train-loss_task-{task_id}": loss})
-            if epoch in vog_data["checkpoints"]:
-                vog_data["gradient_matrices"].append(torch.concat(grad_matrices_epoch, axis=0))
-
+                
+            vog.update(model, epoch)
+                
             for j, task_test in enumerate(test_tasks):
                 _, _, sample_wise_accuracy = evaluate(model, task_test, criterion, device, metric, j)
 
@@ -152,16 +143,16 @@ def training_loop(
 
         if task_id < len(train_tasks)-1:
             mc_dropout_df = mc_dropout_inference(model, task, task_id, device, replay_buffer.weights, num_samples=100, classification=is_classification, store_checkpoint=store_checkpoint)
-            grad_variances = compute_VoG(vog_data)
+            vog_results = vog.finalise()
+            # vog.visualise()
             input_images, labels = map(torch.cat, zip(*[(img, labels) for img, labels, _ in task]))
-            # visualize_VoG(grad_variances, input_images, labels) if is_classification else None
             learning_speeds = calculate_learning_speed(epoch_wise_classification_matrices)
 
             if replay_buffer.strategy is not None:
-                dummy = torch.zeros_like(torch.hstack(grad_variances))
+                dummy = torch.zeros_like(vog_results)
                 if is_classification:
                     metrics = {
-                        "vog": torch.hstack(grad_variances),
+                        "vog": vog_results,
                         "learning_speed": learning_speeds[task_id][: labels.shape[0]],
                         "mc_entropy" : torch.tensor(mc_dropout_df["Predictive_Entropy"].values),
                         "mc_mutual_information" : torch.tensor(mc_dropout_df["Mutual_Information"].values),
@@ -172,7 +163,7 @@ def training_loop(
                 else:
 
                     metrics = {
-                        "vog": torch.hstack(grad_variances),
+                        "vog": vog_results,
                         "learning_speed": learning_speeds[task_id][: labels.shape[0]],
                         "mc_entropy" : dummy,
                         "mc_mutual_information" : dummy,
