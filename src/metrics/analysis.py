@@ -1,6 +1,7 @@
 import pdb
 import pickle
 import torch
+from tabulate import tabulate
 
 
 def get_expected_IoU(n, u):
@@ -52,10 +53,33 @@ u = len(values)
 n = int(len(values) * (1-cutoff_bottom-cutoff_top))
 print("Expected IoU:", round(get_expected_IoU(n=n, u=u), 4))
 print("Expected Mean DoI", round(get_expected_mean_DoI(n=n), 4))
-base_metric = "learning_speed"
-for metric, idcs in sorted_idcs.items():
-    print(f"IoU of {metric} and {base_metric}:", round(compute_IoU(idcs, sorted_idcs[base_metric], cutoff_bottom, cutoff_top), 4))
-    mean_DoI, num_idcs = compute_mean_DoI(idcs, sorted_idcs[base_metric], cutoff_bottom, cutoff_top)
-    print(f"Mean distance of indices between {metric} and {base_metric} based on {num_idcs} values:", round(float(mean_DoI), 4))
+print()
+# base_metric = "learning_speed"
+IoU_rows = []
+DoI_rows = []
+metric_names, idcs = zip(*sorted_idcs.items())
+metric_names = list(metric_names)
+idcs = list(idcs)
+for metric1, idcs1 in zip(metric_names, idcs):
+    IoU_row = [metric1]
+    DoI_row = [metric1]
+    for metric2, idcs2 in zip(metric_names, idcs):
+        IoU = round(compute_IoU(idcs1, idcs2, cutoff_bottom, cutoff_top), 4)
+        mean_DoI, num_idcs = compute_mean_DoI(idcs1, idcs2, cutoff_bottom, cutoff_top)
+        mean_DoI = round(float(mean_DoI), 4)
+        IoU_row.append(IoU)
+        DoI_row.append(mean_DoI)
+    IoU_rows.append(IoU_row)
+    DoI_rows.append(DoI_row)
+
+print("Intersection over Union")
+print(tabulate(IoU_rows, headers=metric_names, tablefmt="grid"))
+print("Mean Distance of Indices")
+print(tabulate(DoI_rows, headers=metric_names, tablefmt="grid"))
+    
+        
+        # print(f"IoU of {metric} and {base_metric}:", round(compute_IoU(idcs, sorted_idcs[base_metric], cutoff_bottom, cutoff_top), 4))
+        # mean_DoI, num_idcs = compute_mean_DoI(idcs, sorted_idcs[base_metric], cutoff_bottom, cutoff_top)
+        # print(f"Mean distance of indices between {metric} and {base_metric} based on {num_idcs} values:", round(float(mean_DoI), 4))
     
 # pdb.set_trace()
