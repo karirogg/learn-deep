@@ -78,9 +78,14 @@ def training_loop(
         # start training
         print(f"Training on task {task_id + 1}")
         vog_data = {
-            "gradient_matrices" : [], # container for storing gradients
-            "checkpoints" : np.linspace(0, epochs_per_task, num_checkpoints, endpoint=False, dtype=np.int32), # iterations at which to store gradients
-            "input_data" : map(torch.cat, zip(*[(img, labels) for img, labels, _ in task])) # stores input images and labels
+            "gradient_matrices": [],  # container for storing gradients
+            "checkpoints": np.linspace(
+                0, epochs_per_task, num_checkpoints, endpoint=False, dtype=np.int32
+            ),  # iterations at which to store gradients
+            "input_data": map(
+                torch.cat,
+                zip(*[(img, labels, indices) for img, labels, indices in task]),
+            ),  # stores input images and labels
         }
 
         if frozen[task_id]:
@@ -151,46 +156,76 @@ def training_loop(
                 ] = sample_wise_accuracy
 
         if task_id < len(train_tasks)-1:
-            mc_dropout_df = mc_dropout_inference(model, task, task_id, device, replay_buffer.weights, num_samples=100, classification=is_classification, store_checkpoint=store_checkpoint)
-            grad_variances = compute_VoG(vog_data)
-            input_images, labels = map(torch.cat, zip(*[(img, labels) for img, labels, _ in task]))
+            vog = compute_VoG(vog_data)
+            if is_classification:
+                metrics_df = mc_dropout_inference(
+                    model,
+                    task,
+                    task_id,
+                    device,
+                    replay_buffer.weights,
+                    num_samples=100,
+                    classification=is_classification,
+                    store_checkpoint=store_checkpoint,
+                )
+                metrics_df = metrics_df.set_index("Index")
+                metrics_df["Learning_Speed"] = calculate_learning_speed(
+                    epoch_wise_classification_matrices
+                )[task_id]
+                metrics_df["Variance_of_Gradients"] = vog
+
+            # input_images, labels = map(torch.cat, zip(*[(img, labels) for img, labels, _ in task]))
             # visualize_VoG(grad_variances, input_images, labels) if is_classification else None
-            learning_speeds = calculate_learning_speed(epoch_wise_classification_matrices)
 
             if replay_buffer.strategy is not None:
-                dummy = torch.zeros_like(torch.hstack(grad_variances))
+                dummy = np.zeros_like(vog)
                 if is_classification:
                     metrics = {
-                        "vog": torch.hstack(grad_variances),
-                        "learning_speed": learning_speeds[task_id][: labels.shape[0]],
-                        "mc_entropy" : torch.tensor(mc_dropout_df["Predictive_Entropy"].values),
-                        "mc_mutual_information" : torch.tensor(mc_dropout_df["Mutual_Information"].values),
-                        "mc_variation_ratio" : torch.tensor(mc_dropout_df["Variation_Ratio"].values),
-                        "mc_mean_std" : torch.tensor(mc_dropout_df["Mean_Std_Deviation"].values),
-                        "mc_variance" : dummy,
+                        "vog": metrics_df["Variance_of_Gradients"].to_numpy(),
+                        "learning_speed": metrics_df["Learning_Speed"].to_numpy(),
+                        "mc_entropy": metrics_df["Predictive_Entropy"].to_numpy(),
+                        "mc_mutual_information": metrics_df[
+                            "Mutual_Information"
+                        ].to_numpy(),
+                        "mc_variation_ratio": metrics_df["Variation_Ratio"].to_numpy(),
+                        "mc_mean_std": metrics_df["Mean_Std_Deviation"].to_numpy(),
+                        "mc_variance": dummy,
                     }
                 else:
 
                     metrics = {
-                        "vog": torch.hstack(grad_variances),
-                        "learning_speed": learning_speeds[task_id][: labels.shape[0]],
-                        "mc_entropy" : dummy,
-                        "mc_mutual_information" : dummy,
-                        "mc_variation_ratio" : dummy,
-                        "mc_mean_std" : dummy,
-                        "mc_variance" : torch.tensor(mc_dropout_df[1])
+                        "vog": metrics_df["Variance_of_Gradients"].to_numpy(),
+                        "learning_speed": dummy,
+                        "mc_entropy": dummy,
+                        "mc_mutual_information": dummy,
+                        "mc_variation_ratio": dummy,
+                        "mc_mean_std": dummy,
+                        "mc_variance": mc_dropout_inference(
+                            model,
+                            task,
+                            task_id,
+                            device,
+                            replay_buffer.weights,
+                            num_samples=100,
+                            classification=is_classification,
+                            store_checkpoint=store_checkpoint,
+                        )[1],
                     }
 
                 replay_buffer.strategy(model, task, task_id, metrics, max_replay_buffer_size / (len(train_tasks) - 1))
-        
+
                 if task_id == 0 and store_checkpoint:
                     checkpoint = {
                         'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()
                     }
                     torch.save(checkpoint, 'checkpoints/checkpoint.pth')
-                    with open("checkpoints/metrics.pkl", "wb") as f:
-                        pickle.dump(metrics, f)
+                    filename = f"checkpoints/metrics_task{task_id}.pkl"
+                    if is_classification:
+                        metrics_df.to_pickle(filename)
+                    else:
+                        with open(filename, "wb") as f:
+                            pickle.dump(metrics, f)
                     print("stored metrics and training checkpoint")
 
         print(f"Results after training on task {task_id + 1}")            
