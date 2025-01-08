@@ -28,10 +28,10 @@ for seed in "${seeds[@]}"; do
         replay_weights=$(jq -n --arg w "$weight" '{
             "vog": 0.0,
             "learning_speed": 0.0,
-            "mc_entropy": 0.0,
-            "mc_mutual_information": 0.0,
-            "mc_variation_ratio": 0.0,
-            "mc_mean_std": 0.0,
+            "predictive_entropy": 0.0,
+            "mutual_information": 0.0,
+            "variation_ratio": 0.0,
+            "mean_std_deviation": 0.0,
             "mc_variance": 0.0,
             ($w): 1.0
         }')

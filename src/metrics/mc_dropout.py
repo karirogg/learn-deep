@@ -21,7 +21,7 @@ def mc_dropout_inference(
     )
 
     if not store_checkpoint: # skip computation if metrics won't be used
-        if classification and (weights == {} or weights["mc_entropy"] + weights["mc_mutual_information"] + weights["mc_variation_ratio"] + weights["mc_mean_std"] == 0):
+        if classification and (weights == {} or weights["predictive_entropy"] + weights["mutual_information"] + weights["variation_ratio"] + weights["mean_std_deviation"] == 0):
             df = pd.DataFrame(
                 {
                     "Predicted_Class": np.zeros(dataset_len),

@@ -28,7 +28,7 @@ if __name__ == "__main__":
     parser.add_argument("--wandb", action="store_true")
     parser.add_argument("--classes", action="store", type=int, default=10, help="Number of classes")
     parser.add_argument("--replay-buffer", action="store", type=str, default=None, help="Replay buffer strategy")
-    parser.add_argument("--replay_weights", type=str, default="{}") # example: --replay_weights '{"vog": 1.0, "learning_speed": 1.0, "mc_entropy": 1.0, "mc_mutual_information": 1.0, "mc_variation_ratio": 1.0, "mc_mean_std": 1.0, "mc_variance": 0.0}' NOTE: mc_variance should have zero weight for classification
+    parser.add_argument("--replay_weights", type=str, default="{}") # example: --replay_weights '{"vog": 1.0, "learning_speed": 1.0, "predictive_entropy": 1.0, "mutual_information": 1.0, "variation_ratio": 1.0, "mean_std_deviation": 1.0, "mc_variance": 0.0}' NOTE: mc_variance should have zero weight for classification
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--store_checkpoint", action="store_true")
     parser.add_argument("--use_checkpoint", action="store_true")

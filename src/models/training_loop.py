@@ -72,6 +72,7 @@ def training_loop(
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             with open("checkpoints/metrics.pkl", "rb") as f:
                 metrics = pickle.load(f)
+            metrics = {col.lower(): torch.tensor(metrics[col].to_numpy(), dtype=torch.float32) for col in metrics.columns}
             replay_buffer.strategy(model, task, task_id, metrics, max_replay_buffer_size / (len(train_tasks) - 1))
             continue
         # print(f"State before training on task {task_id}:\nmodel: {model.state_dict}\noptimizer: {optimizer.state_dict}\nmetrics: {metrics}")
@@ -159,31 +160,31 @@ def training_loop(
                 metrics_df["Learning_Speed"] = calculate_learning_speed(
                     epoch_wise_classification_matrices
                 )[task_id]
-                metrics_df["Variance_of_Gradients"] = vog_results.cpu()
+                metrics_df["vog"] = vog_results.cpu()
 
             if replay_buffer.strategy is not None:
-                dummy = np.zeros_like(vog)
+                dummy = np.zeros_like(vog_results.cpu())
                 if is_classification:
                     metrics = {
-                        "vog": metrics_df["Variance_of_Gradients"].to_numpy(),
+                        "vog": metrics_df["vog"].to_numpy(),
                         "learning_speed": metrics_df["Learning_Speed"].to_numpy(),
-                        "mc_entropy": metrics_df["Predictive_Entropy"].to_numpy(),
-                        "mc_mutual_information": metrics_df[
+                        "predictive_entropy": metrics_df["Predictive_Entropy"].to_numpy(),
+                        "mutual_information": metrics_df[
                             "Mutual_Information"
                         ].to_numpy(),
-                        "mc_variation_ratio": metrics_df["Variation_Ratio"].to_numpy(),
-                        "mc_mean_std": metrics_df["Mean_Std_Deviation"].to_numpy(),
+                        "variation_ratio": metrics_df["Variation_Ratio"].to_numpy(),
+                        "mean_std_deviation": metrics_df["Mean_Std_Deviation"].to_numpy(),
                         "mc_variance": dummy,
                     }
                 else:
 
                     metrics = {
-                        "vog": metrics_df["Variance_of_Gradients"].to_numpy(),
+                        "vog": metrics_df["vog"].to_numpy(),
                         "learning_speed": dummy,
-                        "mc_entropy": dummy,
-                        "mc_mutual_information": dummy,
-                        "mc_variation_ratio": dummy,
-                        "mc_mean_std": dummy,
+                        "predictive_entropy": dummy,
+                        "mutual_information": dummy,
+                        "variation_ratio": dummy,
+                        "mean_std_deviation": dummy,
                         "mc_variance": mc_dropout_inference(
                             model,
                             task,
@@ -204,7 +205,7 @@ def training_loop(
                         'optimizer_state_dict': optimizer.state_dict()
                     }
                     torch.save(checkpoint, 'checkpoints/checkpoint.pth')
-                    filename = f"checkpoints/metrics_task{task_id}.pkl"
+                    filename = f"checkpoints/metrics.pkl"
                     if is_classification:
                         metrics_df.to_pickle(filename)
                     else:

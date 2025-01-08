@@ -90,8 +90,9 @@ class Replay:
         # sort by metrics
         idcs_sum = 0
         for metric, weight in self.weights.items():
-            if metrics[metric].ndim == 0:
+            if metrics.get(metric, None) is None or metrics[metric].ndim == 0:
                 continue
+            # pdb.set_trace()
             if metric != "learning_speed":
                 sorted_idcs = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics[metric][i]))
             else:

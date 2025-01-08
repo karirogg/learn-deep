@@ -4,7 +4,7 @@
 seeds=(31 42 69 420 80085)
 
 # Replay weight keys
-weights=("vog" "learning_speed" "mc_entropy" "mc_mutual_information" "mc_variation_ratio" "mc_mean_std")
+weights=("vog" "learning_speed" "predictive_entropy" "mutual_information" "variation_ratio" "mean_std_deviation")
 
 # Output file
 output_file="results.txt"
@@ -31,10 +31,10 @@ for seed in "${seeds[@]}"; do
         replay_weights=$(jq -n --arg w "$weight" '{
             "vog": 0.0,
             "learning_speed": 0.0,
-            "mc_entropy": 0.0,
-            "mc_mutual_information": 0.0,
-            "mc_variation_ratio": 0.0,
-            "mc_mean_std": 0.0,
+            "predictive_entropy": 0.0,
+            "mutual_information": 0.0,
+            "variation_ratio": 0.0,
+            "mean_std_deviation": 0.0,
             "mc_variance": 0.0,
             ($w): 1.0
         }')
