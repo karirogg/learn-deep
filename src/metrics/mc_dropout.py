@@ -24,6 +24,7 @@ def mc_dropout_inference(
         if classification and (weights == {} or weights["predictive_entropy"] + weights["mutual_information"] + weights["variation_ratio"] + weights["mean_std_deviation"] == 0):
             df = pd.DataFrame(
                 {
+                    "Index": np.arange(0, dataset_len, 1),
                     "Predicted_Class": np.zeros(dataset_len),
                     "Predictive_Entropy": np.zeros(dataset_len),
                     "Mutual_Information": np.zeros(dataset_len),
