@@ -83,7 +83,7 @@ def mc_dropout_inference(
         df = pd.DataFrame(
             {
                 "Index": np.arange(0, dataset_len, 1),
-                "Predicted_Class": predicted_class.cpu().numpy(),
+                "Predicted_Class_MC": predicted_class.cpu().numpy(),
                 "Predictive_Entropy": predictive_entropy.cpu().numpy(),
                 "Mutual_Information": mutual_information.cpu().numpy(),
                 "Variation_Ratio": variation_ratio.cpu().numpy(),
