@@ -95,6 +95,13 @@ if __name__ == "__main__":
 
     wandb.finish()
 
+    replay_buffer_details = args.replay_buffer
+
+    if args.replay_buffer == 'simple_sorted':
+        for key, value in replay_weights.items():
+            if value > 0:
+                replay_buffer_details += f'_{key}_{value}'
+
     print("creating plots...")
     task_name = f'cifar_{num_classes}_n_{n}_epochs_{epochs_per_task}_replay_{args.replay_buffer}_seed_{args.seed}'
 
@@ -142,7 +149,7 @@ if __name__ == "__main__":
         plt.imshow(concat_task_progression.cpu().numpy(), cmap='cividis', interpolation='nearest', aspect='auto')
         plt.xlabel("Epoch")
         plt.ylabel("Example number")
-        plt.savefig(f"../img/heatmaps/{task_name}_task{i}_train.pdf")
+        plt.savefig(f"../img/heatmaps/{task_name}_task_{i}_train.pdf")
         plt.close()
 
         order = torch.argsort(
@@ -163,7 +170,7 @@ if __name__ == "__main__":
         )
         plt.xlabel("Epoch")
         plt.ylabel("Example number")
-        plt.savefig(f"../img/heatmaps/{task_name}_task{i}_test.pdf")
+        plt.savefig(f"../img/heatmaps/{task_name}_task_{i}_test.pdf")
         plt.close()
 
     print("done")
