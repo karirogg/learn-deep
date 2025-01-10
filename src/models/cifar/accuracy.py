@@ -6,4 +6,4 @@ def accuracy(output: torch.Tensor, target: torch.Tensor) -> float:
     # output_masked[:, available_targets] = output[:, available_targets]
     acc = (output.argmax(dim=1) == target).float()
 
-    return acc.mean().item(), acc
+    return acc.sum().item(), acc
