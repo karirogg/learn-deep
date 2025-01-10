@@ -79,14 +79,17 @@ class Replay:
             num_samples_added += len(y)
 
             if num_samples_added >= samples_to_add:
-                break
-    
+                break    
 
     def simple_sorted(self, model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, task_id: int, metrics, samples_to_add: int = 10000):
         print("populating replay buffer...", end= " ")
         # collect inputs
-        input_images, labels = map(torch.cat, zip(*[(img, labels) for img, labels, _ in dataloader]))
-        input_images = input_images.detach().to(torch.float32)
+        unsorted_input_images, unsorted_labels, idx_list = map(torch.cat, zip(*[(img, labels, idcs) for img, labels, idcs in dataloader]))
+        unsorted_input_images = unsorted_input_images.detach().to(torch.float32)
+        input_images, labels = torch.zeros_like(unsorted_input_images), torch.zeros_like(unsorted_labels)
+        for i, idx in enumerate(idx_list):
+            input_images[idx] = unsorted_input_images[i]
+            labels[idx] = unsorted_labels[i]
         # sort by metrics
         idcs_sum = 0
         for metric, weight in self.weights.items():
@@ -111,5 +114,7 @@ class Replay:
             self.X_list.append(input_images[idcs])
             self.task_list.append(torch.full((len(idcs),), task_id, dtype=torch.long))
             self.y_list.append(labels[idcs])
-
         print("done")
+        return
+        
+    # def validated(self)
