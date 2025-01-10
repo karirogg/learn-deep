@@ -79,7 +79,12 @@ def training_loop(
         # print(f"State before training on task {task_id}:\nmodel: {model.state_dict}\noptimizer: {optimizer.state_dict}\nmetrics: {metrics}")
         # start training
         print(f"Training on task {task_id + 1}")
-        vog = VoG(task, epochs_per_task, num_checkpoints, task_id, len(train_tasks) - 1, is_classification)
+
+        if task_id < len(train_tasks) - 1:
+            # Initialize variance_of_gradients class for each task except for the last
+            vog = VoG(
+                task, epochs_per_task, num_checkpoints, task_id, is_classification
+            )
 
         if frozen[task_id]:
             for param in model.task_classifiers[task_id].parameters():
@@ -87,20 +92,16 @@ def training_loop(
             frozen[task_id] = False
 
         for epoch in tqdm(range(epochs_per_task), file=sys.stderr):
-            grad_matrices_epoch = [] # stores gradients for this epoch
             replay_buffer.reset()
+            model.train()
 
             for inputs, labels, _ in task:
-                input_length = inputs.shape[0]
 
                 inputs = inputs.to(device)
                 labels = labels.to(device)
 
                 replay_inputs = replay_buffer.sample()
-
                 replay_inputs[task_id] = (inputs, labels)
-
-                inputs.requires_grad_()
 
                 optimizer.zero_grad()
 
@@ -127,7 +128,7 @@ def training_loop(
                 optimizer.step()
                 wandb.log({f"train-loss_task-{task_id}": loss})
 
-            vog.update(model, epoch)
+            vog.update(model, task_id, epoch)
 
             for j, task_test in enumerate(test_tasks):
                 _, _, sample_wise_accuracy = evaluate(model, task_test, criterion, device, metric, j)
@@ -149,8 +150,8 @@ def training_loop(
             if replay_buffer.strategy is not None or store_checkpoint:
                 # calculate all metrics
                 vog_results = vog.finalise().cpu().numpy()
-                dummy = np.zeros_like(vog_results)
                 # vog.visualise()
+                dummy = np.zeros_like(vog_results)
                 if is_classification:
                     metrics_df = mc_dropout_inference(
                         model,
