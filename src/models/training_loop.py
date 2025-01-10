@@ -40,6 +40,7 @@ def training_loop(
     is_classification: bool,
     store_checkpoint: bool = False,
     use_checkpoint: bool = False,
+    seed: int = 42,
 ) -> list[float]:
     """
     The function trains the model on each of the different tasks sequentially using continual learning and uses a replay buffer to store the data from the previous tasks.
@@ -125,9 +126,9 @@ def training_loop(
 
                 optimizer.step()
                 wandb.log({f"train-loss_task-{task_id}": loss})
-                
+
             vog.update(model, epoch)
-                
+
             for j, task_test in enumerate(test_tasks):
                 _, _, sample_wise_accuracy = evaluate(model, task_test, criterion, device, metric, j)
 
@@ -142,44 +143,50 @@ def training_loop(
                     :, task_id, epoch
                 ] = sample_wise_accuracy
 
+        # TODO: Also save all metrics directly for the test set as well
         if task_id < len(train_tasks)-1:
-            vog_results = vog.finalise()
-            # vog.visualise()
-            if is_classification:
-                metrics_df = mc_dropout_inference(
-                    model,
-                    task,
-                    task_id,
-                    device,
-                    replay_buffer.weights,
-                    num_samples=100,
-                    classification=is_classification,
-                    store_checkpoint=store_checkpoint,
-                )
-                metrics_df = metrics_df.set_index("Index")
-                metrics_df["Learning_Speed"] = calculate_learning_speed(
-                    epoch_wise_classification_matrices
-                )[task_id]
-                metrics_df["vog"] = vog_results.cpu()
 
-            if replay_buffer.strategy is not None:
-                dummy = np.zeros_like(vog_results.cpu())
+            if replay_buffer.strategy is not None or store_checkpoint:
+                # calculate all metrics
+                vog_results = vog.finalise().cpu().numpy()
+                dummy = np.zeros_like(vog_results)
+                # vog.visualise()
                 if is_classification:
+                    metrics_df = mc_dropout_inference(
+                        model,
+                        task,
+                        task_id,
+                        device,
+                        replay_buffer.weights,
+                        num_samples=100,
+                        classification=is_classification,
+                        store_checkpoint=store_checkpoint,
+                    )
+                    metrics_df = metrics_df.set_index("Index")
+                    metrics_df["Variance_of_Gradients"] = vog_results
+                    metrics_df["Learning_Speed"] = calculate_learning_speed(
+                        epoch_wise_classification_matrices
+                    )[task_id]
+
+                    # replay buffer expects a dictionary
                     metrics = {
-                        "vog": metrics_df["vog"].to_numpy(),
+                        "vog": vog_results,
                         "learning_speed": metrics_df["Learning_Speed"].to_numpy(),
-                        "predictive_entropy": metrics_df["Predictive_Entropy"].to_numpy(),
+                        "predictive_entropy": metrics_df[
+                            "Predictive_Entropy"
+                        ].to_numpy(),
                         "mutual_information": metrics_df[
                             "Mutual_Information"
                         ].to_numpy(),
                         "variation_ratio": metrics_df["Variation_Ratio"].to_numpy(),
-                        "mean_std_deviation": metrics_df["Mean_Std_Deviation"].to_numpy(),
+                        "mean_std_deviation": metrics_df[
+                            "Mean_Std_Deviation"
+                        ].to_numpy(),
                         "mc_variance": dummy,
                     }
                 else:
-
                     metrics = {
-                        "vog": metrics_df["vog"].to_numpy(),
+                        "vog": vog_results,
                         "learning_speed": dummy,
                         "predictive_entropy": dummy,
                         "mutual_information": dummy,
@@ -196,8 +203,14 @@ def training_loop(
                             store_checkpoint=store_checkpoint,
                         )[1],
                     }
-
-                replay_buffer.strategy(model, task, task_id, metrics, max_replay_buffer_size / (len(train_tasks) - 1))
+                if replay_buffer.strategy is not None:
+                    replay_buffer.strategy(
+                        model,
+                        task,
+                        task_id,
+                        metrics,
+                        max_replay_buffer_size / (len(train_tasks) - 1),
+                    )
 
                 if task_id == 0 and store_checkpoint:
                     checkpoint = {
@@ -205,7 +218,7 @@ def training_loop(
                         'optimizer_state_dict': optimizer.state_dict()
                     }
                     torch.save(checkpoint, 'checkpoints/checkpoint.pth')
-                    filename = f"checkpoints/metrics.pkl"
+                    filename = f"checkpoints/metrics_seed_{seed}.pkl"
                     if is_classification:
                         metrics_df.to_pickle(filename)
                     else:
@@ -227,4 +240,9 @@ def training_loop(
                 print(f'Task {j+1} test loss: {test_loss}')
                 print(f'Task {j+1} test accuracy: {test_accuracy}')
 
-    return task_test_losses, task_test_accuracies, epoch_wise_classification_matrices_test
+    return (
+        task_test_losses,
+        task_test_accuracies,
+        epoch_wise_classification_matrices,
+        epoch_wise_classification_matrices_test,
+    )

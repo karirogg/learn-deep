@@ -69,24 +69,28 @@ if __name__ == "__main__":
     else:
         print("WARNING: no valid replay strategy provided - running without")
 
-    task_test_losses, task_test_accuracies, epoch_wise_classification_matrices = (
-        training_loop(
-            train_tasks=train_tasks,
-            test_tasks=test_tasks,
-            model=model,
-            optimizer=optimizer,
-            criterion=criterion,
-            device=device,
-            metric=accuracy,
-            evaluate=evaluate,
-            replay_buffer=replay_buffer,
-            max_replay_buffer_size=5000,
-            epochs_per_task=epochs_per_task,
-            num_checkpoints=num_checkpoints,
-            is_classification=True,
-            store_checkpoint=args.store_checkpoint,
-            use_checkpoint=args.use_checkpoint,
-        )
+    (
+        task_test_losses,
+        task_test_accuracies,
+        epoch_wise_classification_matrices,
+        epoch_wise_classification_matrices_test,
+    ) = training_loop(
+        train_tasks=train_tasks,
+        test_tasks=test_tasks,
+        model=model,
+        optimizer=optimizer,
+        criterion=criterion,
+        device=device,
+        metric=accuracy,
+        evaluate=evaluate,
+        replay_buffer=replay_buffer,
+        max_replay_buffer_size=5000,
+        epochs_per_task=epochs_per_task,
+        num_checkpoints=num_checkpoints,
+        is_classification=True,
+        store_checkpoint=args.store_checkpoint,
+        use_checkpoint=args.use_checkpoint,
+        seed=args.seed,
     )
 
     wandb.finish()
@@ -94,12 +98,18 @@ if __name__ == "__main__":
     print("creating plots...")
     task_name = f'cifar_{num_classes}_n_{n}_epochs_{epochs_per_task}_replay_{args.replay_buffer}_seed_{args.seed}'
 
-    for i, task in enumerate(train_tasks):
+    for i, task in enumerate(test_tasks):
         task_progression = []
-        for j in range(len(train_tasks)):
-            task_progression.append(torch.mean(epoch_wise_classification_matrices[i][:, j, :], dim=0))
+        for j in range(len(test_tasks)):
+            task_progression.append(
+                torch.mean(epoch_wise_classification_matrices_test[i][:, j, :], dim=0)
+            )
 
-        plt.plot(np.arange(len(train_tasks) * epochs_per_task), np.concatenate(task_progression, axis=0), label=f'Task {i+1}')
+        plt.plot(
+            np.arange(len(test_tasks) * epochs_per_task),
+            np.concatenate(task_progression, axis=0),
+            label=f"Task {i+1}",
+        )
 
     plt.legend()
 
@@ -116,22 +126,56 @@ if __name__ == "__main__":
     plt.xlim(0, len(train_tasks) * epochs_per_task)
     plt.ylim(0, 1)
 
-    plt.savefig(f'../img/task_progression/{task_name}.png')
+    plt.savefig(f"../img/task_progression/{task_name}_test.pdf")
     plt.close()
 
     for i, task in enumerate(train_tasks):
         # plot heatmap of classification accuracy per sample
 
-        order = torch.argsort(torch.mean(epoch_wise_classification_matrices[i][:,i,:], axis=1), descending=False)
-
+        order = torch.argsort(
+            torch.mean(epoch_wise_classification_matrices[i][:, i, :], axis=1),
+            descending=False,
+        )
         concat_task_progression = torch.cat([epoch_wise_classification_matrices[i][:, j, :] for j in range(n)], dim=1)[order]
 
         plt.figure(figsize=(5 * n, 5))
         plt.imshow(concat_task_progression.cpu().numpy(), cmap='cividis', interpolation='nearest', aspect='auto')
+        plt.xlabel("Epoch")
+        plt.ylabel("Example number")
+        plt.savefig(f"../img/heatmaps/{task_name}_task{i}_train.pdf")
+        plt.close()
 
-        plt.savefig(f'../img/heatmaps/{task_name}.png')
+        order = torch.argsort(
+            torch.mean(epoch_wise_classification_matrices_test[i][:, i, :], axis=1),
+            descending=False,
+        )
+        concat_task_progression = torch.cat(
+            [epoch_wise_classification_matrices_test[i][:, j, :] for j in range(n)],
+            dim=1,
+        )[order]
+
+        plt.figure(figsize=(5 * n, 5))
+        plt.imshow(
+            concat_task_progression.cpu().numpy(),
+            cmap="cividis",
+            interpolation="nearest",
+            aspect="auto",
+        )
+        plt.xlabel("Epoch")
+        plt.ylabel("Example number")
+        plt.savefig(f"../img/heatmaps/{task_name}_task{i}_test.pdf")
+        plt.close()
 
     print("done")
+    if args.store_checkpoint:
+        # Save final example wise accuracies of task 1 examples
+        final_acc_train = epoch_wise_classification_matrices[0][:, -1, -1].cpu().numpy()
+        final_acc_test = (
+            epoch_wise_classification_matrices_test[0][:, -1, -1].cpu().numpy()
+        )
+
+        np.save(f"checkpoints/final_acc_seed_{args.seed}_train.npy", final_acc_train)
+        np.save(f"checkpoints/final_acc_seed_{args.seed}_test.npy", final_acc_test)
 
     for i, (losses, accuracies) in enumerate(
         zip(task_test_losses, task_test_accuracies)
