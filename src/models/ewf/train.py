@@ -50,7 +50,7 @@ if __name__ == "__main__":
     wandb.init(project="learn-deep", config=model_config, mode="online" if args.wandb else "disabled")
 
     # TODO: Possibly use lower learning rate
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=3e-5)
 
     # TODO: After we have verified that task incremental learning works well, we will want to use SGD with momentum and a scheduler
     # optimizer = torch.optim.SGD(
@@ -71,8 +71,8 @@ if __name__ == "__main__":
         with open(f'../data/ewf/train/task_{i}', 'rb') as f:
             task_X, task_y = pickle.load(f)
 
-            task_train_tensor = torch.tensor(task_X, dtype=torch.float32)
-            task_labels = torch.tensor(task_y, dtype=torch.float32)
+            task_train_tensor = torch.tensor(task_X, dtype=torch.float32, device=device)
+            task_labels = torch.tensor(task_y, dtype=torch.float32, device=device)
 
             train_tasks.append(
                 DataLoader(
@@ -89,8 +89,8 @@ if __name__ == "__main__":
         with open(f'../data/ewf/test/task_{i}', 'rb') as f:
             task_X, task_y = pickle.load(f)
 
-            task_test_tensor = torch.tensor(task_X, dtype=torch.float32)
-            task_test_labels = torch.tensor(task_y, dtype=torch.float32)
+            task_test_tensor = torch.tensor(task_X, dtype=torch.float32, device=device)
+            task_test_labels = torch.tensor(task_y, dtype=torch.float32, device=device)
 
             test_tasks.append(
                 DataLoader(
@@ -114,7 +114,7 @@ if __name__ == "__main__":
     else:
         print("WARNING: no valid replay strategy provided - running without")
 
-    task_test_losses, task_test_accuracies, epoch_wise_classification_matrices = (
+    task_test_losses, task_test_accuracies, epoch_wise_classification_matrices, epoch_wise_classification_matrices_test = (
         training_loop(
             train_tasks=train_tasks,
             test_tasks=test_tasks,
@@ -126,7 +126,7 @@ if __name__ == "__main__":
             metric=mse,
             evaluate=evaluate,
             replay_buffer=replay_buffer,
-            max_replay_buffer_size=5000,
+            max_replay_buffer_size=2000,
             epochs_per_task=epochs_per_task,
             num_checkpoints=num_checkpoints,
             is_classification=False,
@@ -137,46 +137,98 @@ if __name__ == "__main__":
 
     wandb.finish()
 
+    replay_buffer_details = args.replay_buffer
+
+    if args.replay_buffer == 'simple_sorted':
+        for key, value in replay_weights.items():
+            if value > 0:
+                replay_buffer_details += f'_{key}_{round(value, 2)}'
+
     print("creating plots...")
-    task_name = f'ewf_epochs_{epochs_per_task}_replay_{args.replay_buffer}'
+    task_name = f'ewf_epochs_{epochs_per_task}_replay_{replay_buffer_details}_seed_{args.seed}'
 
-    for i, task in enumerate(train_tasks):
+    for i, task in enumerate(test_tasks):
         task_progression = []
-        for j in range(len(train_tasks)):
-            task_progression.append(torch.mean(epoch_wise_classification_matrices[i][:, j, :], dim=0))
+        for j in range(len(test_tasks)):
+            task_progression.append(
+                torch.mean(epoch_wise_classification_matrices_test[i][:, j, :], dim=0)
+            )
 
-        plt.plot(np.arange(len(train_tasks) * epochs_per_task), np.concatenate(task_progression, axis=0), label=f'Task {i+1}')
+        plt.plot(
+            np.arange(len(test_tasks) * epochs_per_task),
+            np.concatenate(task_progression, axis=0),
+            label=f"Task {i+1}",
+        )
 
     plt.legend()
 
     if not os.path.exists('../img/'):
         os.mkdir('../img')
 
-    if not os.path.exists('../img/task_progression'):
-        os.mkdir('../img/task_progression')
-        os.mkdir('../img/heatmaps')
+    if not os.path.exists('../img/ewf'):
+        os.mkdir('../img/ewf')
+
+    if not os.path.exists('../img/ewf/task_progression'):
+        os.mkdir('../img/ewf/task_progression')
+        os.mkdir('../img/ewf/heatmaps')
 
     plt.xlabel('Epoch')
     plt.ylabel('MSE')
 
     plt.xlim(0, len(train_tasks) * epochs_per_task)
+    plt.ylim(0, None)
 
-    plt.savefig(f'../img/task_progression/{task_name}.png')
+
+    plt.savefig(f"../img/ewf/task_progression/{task_name}_test.pdf")
     plt.close()
 
     for i, task in enumerate(train_tasks):
         # plot heatmap of classification accuracy per sample
 
-        order = torch.argsort(torch.mean(epoch_wise_classification_matrices[i][:,i,:], axis=1), descending=False)
-
+        order = torch.argsort(
+            torch.mean(epoch_wise_classification_matrices[i][:, i, :], axis=1),
+            descending=False,
+        )
         concat_task_progression = torch.cat([epoch_wise_classification_matrices[i][:, j, :] for j in range(n)], dim=1)[order]
 
         plt.figure(figsize=(5 * n, 5))
         plt.imshow(concat_task_progression.cpu().numpy(), cmap='cividis', interpolation='nearest', aspect='auto')
+        plt.xlabel("Epoch")
+        plt.ylabel("Example number")
+        plt.savefig(f"../img/ewf/heatmaps/{task_name}_task_{i}_train.pdf")
+        plt.close()
 
-        plt.savefig(f'../img/heatmaps/{task_name}.png')
+        order = torch.argsort(
+            torch.mean(epoch_wise_classification_matrices_test[i][:, i, :], axis=1),
+            descending=False,
+        )
+        concat_task_progression = torch.cat(
+            [epoch_wise_classification_matrices_test[i][:, j, :] for j in range(n)],
+            dim=1,
+        )[order]
+
+        plt.figure(figsize=(5 * n, 5))
+        plt.imshow(
+            concat_task_progression.cpu().numpy(),
+            cmap="cividis",
+            interpolation="nearest",
+            aspect="auto",
+        )
+        plt.xlabel("Epoch")
+        plt.ylabel("Example number")
+        plt.savefig(f"../img/ewf/heatmaps/{task_name}_task_{i}_test.pdf")
+        plt.close()
 
     print("done")
+    if args.store_checkpoint:
+        # Save final example wise accuracies of task 1 examples
+        final_acc_train = epoch_wise_classification_matrices[0][:, -1, -1].cpu().numpy()
+        final_acc_test = (
+            epoch_wise_classification_matrices_test[0][:, -1, -1].cpu().numpy()
+        )
+
+        np.save(f"checkpoints/ewf_final_acc_seed_{args.seed}_train.npy", final_acc_train)
+        np.save(f"checkpoints/ewf_final_acc_seed_{args.seed}_test.npy", final_acc_test)
 
     for i, (losses, accuracies) in enumerate(
         zip(task_test_losses, task_test_accuracies)

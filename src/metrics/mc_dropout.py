@@ -40,7 +40,11 @@ def mc_dropout_inference(
 
     # [num_samples, dataset_length, num_classes/output_dim]
     all_predictions = torch.zeros(num_samples, dataset_len, num_classes, device=device)
+
     all_labels = torch.zeros(dataset_len, device=device, dtype=torch.long)
+
+    if not classification:
+         all_labels = torch.zeros(dataset_len, device=device, dtype=torch.float32)
 
     with torch.no_grad():
         for inputs, labels, indices in tqdm(
@@ -54,8 +58,12 @@ def mc_dropout_inference(
 
             for i in range(num_samples):
                 outputs = model(inputs, task_id)  # [batch_size, num_classes/output_dim]
+
                 if classification:
                     outputs = torch.nn.functional.softmax(outputs, dim=1)
+                else:
+                    outputs = outputs.unsqueeze(1)
+
                 all_predictions[i, indices] = outputs
 
             all_labels[indices] = labels

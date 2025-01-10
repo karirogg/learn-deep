@@ -79,7 +79,7 @@ def training_loop(
         # print(f"State before training on task {task_id}:\nmodel: {model.state_dict}\noptimizer: {optimizer.state_dict}\nmetrics: {metrics}")
         # start training
         print(f"Training on task {task_id + 1}")
-        vog = VoG(task, epochs_per_task, num_checkpoints, task_id, is_classification)
+        vog = VoG(task, epochs_per_task, num_checkpoints, task_id, len(train_tasks) - 1, is_classification)
 
         if frozen[task_id]:
             for param in model.task_classifiers[task_id].parameters():

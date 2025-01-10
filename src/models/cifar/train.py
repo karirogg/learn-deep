@@ -103,7 +103,7 @@ if __name__ == "__main__":
                 replay_buffer_details += f'_{key}_{value}'
 
     print("creating plots...")
-    task_name = f'cifar_{num_classes}_n_{n}_epochs_{epochs_per_task}_replay_{args.replay_buffer}_seed_{args.seed}'
+    task_name = f'cifar_{num_classes}_n_{n}_epochs_{epochs_per_task}_replay_{replay_buffer_details}_seed_{args.seed}'
 
     for i, task in enumerate(test_tasks):
         task_progression = []
@@ -120,12 +120,15 @@ if __name__ == "__main__":
 
     plt.legend()
 
-    if not os.path.exists('../img/'):
+    if not os.path.exists('../img'):
         os.mkdir('../img')
 
-    if not os.path.exists('../img/task_progression'):
-        os.mkdir('../img/task_progression')
-        os.mkdir('../img/heatmaps')
+    if not os.path.exists('../img/cifar'):
+        os.mkdir('../img/cifar')
+
+    if not os.path.exists('../img/cifar/task_progression'):
+        os.mkdir('../img/cifar/task_progression')
+        os.mkdir('../img/cifar/heatmaps')
 
     plt.xlabel('Epoch')
     plt.ylabel('Classification Accuracy')
@@ -133,7 +136,7 @@ if __name__ == "__main__":
     plt.xlim(0, len(train_tasks) * epochs_per_task)
     plt.ylim(0, 1)
 
-    plt.savefig(f"../img/task_progression/{task_name}_test.pdf")
+    plt.savefig(f"../img/cifar/task_progression/{task_name}_test.pdf")
     plt.close()
 
     for i, task in enumerate(train_tasks):
@@ -149,7 +152,7 @@ if __name__ == "__main__":
         plt.imshow(concat_task_progression.cpu().numpy(), cmap='cividis', interpolation='nearest', aspect='auto')
         plt.xlabel("Epoch")
         plt.ylabel("Example number")
-        plt.savefig(f"../img/heatmaps/{task_name}_task_{i}_train.pdf")
+        plt.savefig(f"../img/cifar/heatmaps/{task_name}_task_{i}_train.pdf")
         plt.close()
 
         order = torch.argsort(
@@ -170,7 +173,7 @@ if __name__ == "__main__":
         )
         plt.xlabel("Epoch")
         plt.ylabel("Example number")
-        plt.savefig(f"../img/heatmaps/{task_name}_task_{i}_test.pdf")
+        plt.savefig(f"../img/cifar/heatmaps/{task_name}_task_{i}_test.pdf")
         plt.close()
 
     print("done")
@@ -181,8 +184,8 @@ if __name__ == "__main__":
             epoch_wise_classification_matrices_test[0][:, -1, -1].cpu().numpy()
         )
 
-        np.save(f"checkpoints/final_acc_seed_{args.seed}_train.npy", final_acc_train)
-        np.save(f"checkpoints/final_acc_seed_{args.seed}_test.npy", final_acc_test)
+        np.save(f"checkpoints/cifar_final_acc_seed_{args.seed}_train.npy", final_acc_train)
+        np.save(f"checkpoints/cifar_final_acc_seed_{args.seed}_test.npy", final_acc_test)
 
     for i, (losses, accuracies) in enumerate(
         zip(task_test_losses, task_test_accuracies)

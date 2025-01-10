@@ -8,16 +8,17 @@ from tqdm import tqdm
 
 class VoG:
     
-    def __init__(self, dataloader, epochs_per_task, num_checkpoints, task_id, is_classification):
+    def __init__(self, dataloader, epochs_per_task, num_checkpoints, task_id, max_task_id, is_classification):
         self.dataloader = dataloader
         self.checkpoint_idcs = np.linspace(0, epochs_per_task, num_checkpoints, endpoint=False, dtype=np.int32) # iterations at which to store gradients
         self.gradient_matrices = []
         self.task_id = task_id
+        self.max_task_id = max_task_id
         self.is_classification = is_classification
         self.result = None
         
     def update(self, model, epoch_idx):
-        if self.task_id != 0 or not epoch_idx in self.checkpoint_idcs:
+        if self.task_id == self.max_task_id or not epoch_idx in self.checkpoint_idcs:
             return
         model.eval()
         gradients = []
@@ -27,8 +28,16 @@ class VoG:
             inputs.requires_grad = True
             ones = torch.ones(labels.shape).to(inputs.device)
             logits = model(inputs, task_id=0)
-            selected_logits = logits[torch.arange(labels.shape[0]), labels]
+
+            selected_logits = None 
+
+            if len(logits.shape) == 1:
+                selected_logits = logits[torch.arange(labels.shape[0])]
+            else:
+                selected_logits = logits[torch.arange(labels.shape[0]), labels]
+                
             selected_logits.backward(ones)
+
             gradients.append(inputs.grad.data)
             idx_list.append(idcs)
         idx_list = torch.cat(idx_list)
@@ -38,6 +47,7 @@ class VoG:
             sorted_gradients[idx] = gradients[i]
         if self.is_classification:
             sorted_gradients = sorted_gradients.mean(axis=1) # average over channels
+
         self.gradient_matrices.append(sorted_gradients)
         return
     
@@ -53,7 +63,10 @@ class VoG:
             # for l in epoch_labels.unique():
             #     class_grad_variances = grad_variances[epoch_labels == l]
             #     normalized_class_values = (class_grad_variances - class_grad_variances.mean()).abs() / class_grad_variances.std()
-            #     normalised_grad_variances.append(normalized_class_values)
+            #     normalised_grad_variances.append(normalized_class_values) 
+        else:
+            grad_variances = grad_variances.mean(axis=1)
+
         self.result = grad_variances
         return grad_variances
     
