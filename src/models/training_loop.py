@@ -75,6 +75,9 @@ def training_loop(
                 metrics = pickle.load(f)
             metrics = {col.lower(): torch.tensor(metrics[col].to_numpy(), dtype=torch.float32) for col in metrics.columns}
             replay_buffer.strategy(model, task, task_id, metrics, max_replay_buffer_size / (len(train_tasks) - 1))
+            vog = VoG(
+                task, epochs_per_task, num_checkpoints, task_id, is_classification
+            )
             continue
         # print(f"State before training on task {task_id}:\nmodel: {model.state_dict}\noptimizer: {optimizer.state_dict}\nmetrics: {metrics}")
         # start training
@@ -126,7 +129,8 @@ def training_loop(
                 loss.backward()
 
                 optimizer.step()
-                wandb.log({f"train-loss_task-{task_id}": loss})
+                
+            wandb.log({f"train-loss_task-{task_id}": loss})
 
             vog.update(model, task_id, epoch)
 
