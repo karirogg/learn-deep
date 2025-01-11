@@ -12,6 +12,9 @@ output_file="results.txt"
 # Clear the output file before running
 > "$output_file"
 
+# run preprocessing
+PYTHONUNBUFFERED=1 python -m preprocessing.cifar_100 --n 2
+
 # Outer loop: Iterate over seeds
 for seed in "${seeds[@]}"; do
     echo "Running experiments for seed: $seed" | tee -a "$output_file"
