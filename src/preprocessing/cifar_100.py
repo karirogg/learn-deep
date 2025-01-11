@@ -43,3 +43,5 @@ for i, task in enumerate(tasks):
 for i, task in enumerate(test_tasks):
     with open(f'../data/cifar-100-2/test/task_{i+1}', 'wb') as f:
         pickle.dump(task, f)
+
+print('Preprocessing done!')

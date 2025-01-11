@@ -12,7 +12,7 @@ def evaluate(model: torch.nn.Module, evaluation_loader: torch.utils.data.DataLoa
         for inputs, labels, indices in evaluation_loader:
             inputs, labels = inputs.to(device), labels.to(device)
             outputs = model(inputs, task_id)
-            test_loss += criterion(outputs, labels).item()
+            test_loss += criterion(outputs, labels).item() * len(outputs)
 
             batch_metric_agg, sample_wise_metric = metric(outputs, labels)
 
@@ -20,7 +20,7 @@ def evaluate(model: torch.nn.Module, evaluation_loader: torch.utils.data.DataLoa
 
             sample_wise_accuracy[indices] = sample_wise_metric
 
-    test_loss /= len(evaluation_loader)
+    test_loss /= len(evaluation_loader.dataset)
     test_accuracy /= len(evaluation_loader.dataset)
 
     return test_loss, test_accuracy, sample_wise_accuracy

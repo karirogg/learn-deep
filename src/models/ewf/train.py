@@ -33,6 +33,9 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--store_checkpoint", action="store_true")
     parser.add_argument("--use_checkpoint", action="store_true")
+    parser.add_argument("--buffer-size", action="store", type=int, default=10, help="Size of replay buffer (percentage of training set)")
+    parser.add_argument("--cutoff-lower", action="store", type=int, default=20, help="Percentage of lower cutoff")
+    parser.add_argument("--cutoff-upper", action="store", type=int, default=20, help="Percentage of upper cutoff")
 
     args = parser.parse_args()
     fix_seed(args.seed)
@@ -50,7 +53,7 @@ if __name__ == "__main__":
     wandb.init(project="learn-deep", config=model_config, mode="online" if args.wandb else "disabled")
 
     # TODO: Possibly use lower learning rate
-    optimizer = torch.optim.Adam(model.parameters(), lr=3e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=5e-6)
 
     # TODO: After we have verified that task incremental learning works well, we will want to use SGD with momentum and a scheduler
     # optimizer = torch.optim.SGD(
@@ -104,10 +107,9 @@ if __name__ == "__main__":
                 )
             )
 
-
-    replay_params = {"remove_lower_percent" : 20, "remove_upper_percent" : 20}
+    replay_params = {"remove_lower_percent" : args.cutoff_lower, "remove_upper_percent" : args.cutoff_upper}
     replay_weights = json.loads(args.replay_weights)
-    replay_buffer = Replay(replay_params, strategy=args.replay_buffer, batch_size=replay_batch_size, num_tasks=n, weights=replay_weights)
+    replay_buffer = Replay(replay_params, strategy=args.replay_buffer, batch_size=replay_batch_size, samples_to_add=len(train_tasks[0].dataset) * args.buffer_size // 100, num_tasks=n, weights=replay_weights)
     
     if args.replay_buffer:
         print("running with replay strategy:", args.replay_buffer)
@@ -126,7 +128,6 @@ if __name__ == "__main__":
             metric=mse,
             evaluate=evaluate,
             replay_buffer=replay_buffer,
-            max_replay_buffer_size=2000,
             epochs_per_task=epochs_per_task,
             num_checkpoints=num_checkpoints,
             is_classification=False,
@@ -147,6 +148,16 @@ if __name__ == "__main__":
     print("creating plots...")
     task_name = f'ewf_epochs_{epochs_per_task}_replay_{replay_buffer_details}_seed_{args.seed}'
 
+    if not os.path.exists('../img/'):
+        os.mkdir('../img')
+
+    if not os.path.exists('../img/ewf'):
+        os.mkdir('../img/ewf')
+
+    if not os.path.exists('../img/ewf/task_progression'):
+        os.mkdir('../img/ewf/task_progression')
+        os.mkdir('../img/ewf/heatmaps')
+
     for i, task in enumerate(test_tasks):
         task_progression = []
         for j in range(len(test_tasks)):
@@ -162,15 +173,29 @@ if __name__ == "__main__":
 
     plt.legend()
 
-    if not os.path.exists('../img/'):
-        os.mkdir('../img')
+    plt.xlabel('Epoch')
+    plt.ylabel('MSE')
 
-    if not os.path.exists('../img/ewf'):
-        os.mkdir('../img/ewf')
+    plt.xlim(0, len(train_tasks) * epochs_per_task)
+    plt.ylim(0, None)
 
-    if not os.path.exists('../img/ewf/task_progression'):
-        os.mkdir('../img/ewf/task_progression')
-        os.mkdir('../img/ewf/heatmaps')
+    plt.savefig(f"../img/ewf/task_progression/{task_name}_test.pdf")
+    plt.close()
+
+    for i, task in enumerate(train_tasks):
+        task_progression = []
+        for j in range(len(train_tasks)):
+            task_progression.append(
+                torch.mean(epoch_wise_classification_matrices[i][:, j, :], dim=0)
+            )
+
+        plt.plot(
+            np.arange(len(train_tasks) * epochs_per_task),
+            np.concatenate(task_progression, axis=0),
+            label=f"Task {i+1} (train)",
+        )
+
+    plt.legend()
 
     plt.xlabel('Epoch')
     plt.ylabel('MSE')
@@ -178,8 +203,7 @@ if __name__ == "__main__":
     plt.xlim(0, len(train_tasks) * epochs_per_task)
     plt.ylim(0, None)
 
-
-    plt.savefig(f"../img/ewf/task_progression/{task_name}_test.pdf")
+    plt.savefig(f"../img/ewf/task_progression/{task_name}_train.pdf")
     plt.close()
 
     for i, task in enumerate(train_tasks):
