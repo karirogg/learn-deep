@@ -53,7 +53,7 @@ if __name__ == "__main__":
     wandb.init(project="learn-deep", config=model_config, mode="online" if args.wandb else "disabled")
 
     # TODO: Possibly optimize further
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=5e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=3e-4, weight_decay=5e-5)
 
     criterion = torch.nn.CrossEntropyLoss()
 
