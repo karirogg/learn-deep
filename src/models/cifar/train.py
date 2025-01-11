@@ -28,7 +28,7 @@ if __name__ == "__main__":
     parser.add_argument("--wandb", action="store_true")
     parser.add_argument("--classes", action="store", type=int, default=10, help="Number of classes")
     parser.add_argument("--replay-buffer", action="store", type=str, default=None, help="Replay buffer strategy")
-    parser.add_argument("--replay-weights", type=str, default="{}") # example: --replay_weights '{"vog": 1.0, "learning_speed": 1.0, "predictive_entropy": 1.0, "mutual_information": 1.0, "variation_ratio": 1.0, "mean_std_deviation": 1.0, "mc_variance": 0.0}' NOTE: mc_variance should have zero weight for classification
+    parser.add_argument("--replay-weights", type=str, default="{}") # example: --replay-weights '{"vog": 1.0, "learning_speed": 1.0, "predictive_entropy": 1.0, "mutual_information": 1.0, "variation_ratio": 1.0, "mean_std_deviation": 1.0, "mc_variance": 0.0}' NOTE: mc_variance should have zero weight for classification
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--store_checkpoint", action="store_true")
     parser.add_argument("--use_checkpoint", action="store_true")
@@ -53,13 +53,18 @@ if __name__ == "__main__":
     wandb.init(project="learn-deep", config=model_config, mode="online" if args.wandb else "disabled")
 
     # TODO: Possibly optimize further
-    optimizer = torch.optim.Adam(model.parameters(), lr=5e-4, weight_decay=5e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=5e-5)
 
     criterion = torch.nn.CrossEntropyLoss()
 
     batch_size = 128
     replay_batch_size = 8
-    num_checkpoints = 10
+    # always want to store some checkpoint if we are storing them
+    num_checkpoints = min(10, epochs_per_task)
+
+    if args.store_checkpoint:
+        if not os.path.exists("checkpoints"):
+            os.mkdir("checkpoints")
 
     train_tasks, test_tasks = preprocess_cifar(num_classes, n, batch_size, device)
 

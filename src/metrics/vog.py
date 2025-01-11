@@ -14,7 +14,7 @@ class VoG:
         self.dataloader = dataloader
         self.checkpoint_idcs = np.linspace(
             0, epochs_per_task, num_checkpoints + 1, endpoint=True, dtype=np.int32
-        )[1:]
+        )
         self.gradient_matrices = []
         self.task_id = task_id
         self.is_classification = is_classification
@@ -51,16 +51,18 @@ class VoG:
         self.gradient_matrices.append(sorted_gradients)
         return
 
-    def finalise(self, early=True):
+    def finalise(self, early=False, late=False):
         # distinguish early and late stage training dynamics
         if early:
             gradient_matrices = torch.stack(
                 self.gradient_matrices[:3], dim=0
             )  # [3, num_examples, H, W]
-        else:
+        elif late:
             gradient_matrices = torch.stack(
                 self.gradient_matrices[-3:], dim=0
             )  # [3, num_examples, H, W]
+        else:
+            gradient_matrices = torch.stack(self.gradient_matrices, dim=0)
 
         grad_means = torch.mean(gradient_matrices, dim=0)  # [num_examples, H, W]
         grad_variances = (

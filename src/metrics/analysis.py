@@ -37,7 +37,7 @@ def compute_mean_DoI(idcs1, idcs2, cutoff_bottom, cutoff_top):
     distances = torch.hstack(distances).float()
     return distances.mean(), len(common_elements)
 
-with open("checkpoints/metrics.pkl", "rb") as f:
+with open("checkpoints/training_metrics.pkl", "rb") as f:
     metrics = pickle.load(f)
     
 sorted_idcs = {}

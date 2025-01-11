@@ -67,15 +67,25 @@ def training_loop(
         # load model and metrics if training on task 0 has already been done and metrics have been computed (use only for classification) -> task 0 is skipped in this case
         if task_id == 0 and use_checkpoint:
             print("WARNING: loading checkpoint from previous run")
-            checkpoint = torch.load('checkpoints/checkpoint.pth')
+            checkpoint = torch.load(f'checkpoints/checkpoint_seed{seed}.pth', weights_only=True)
             model.load_state_dict(checkpoint['model_state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-            with open("checkpoints/metrics.pkl", "rb") as f:
+            epoch_wise_classification_matrices = checkpoint['epoch_wise_classification_matrices']
+            epoch_wise_classification_matrices_test = checkpoint['epoch_wise_classification_matrices_test']
+            with open(f"checkpoints/seed_{seed}_training_metrics.pkl", "rb") as f:
                 metrics = pickle.load(f)
+
             metrics = {col.lower(): torch.tensor(metrics[col].to_numpy(), dtype=torch.float32) for col in metrics.columns}
             replay_buffer.strategy(model, task, task_id, metrics)
-            vog = VoG(
+            vog_train = VoG(
                 task, epochs_per_task, num_checkpoints, task_id, is_classification
+            )
+            vog_test = VoG(
+                test_tasks[task_id],
+                epochs_per_task,
+                num_checkpoints,
+                task_id,
+                is_classification,
             )
             continue
         # print(f"State before training on task {task_id}:\nmodel: {model.state_dict}\noptimizer: {optimizer.state_dict}\nmetrics: {metrics}")
@@ -160,8 +170,9 @@ def training_loop(
         ):
 
             # calculate training metrics
-            vog_results_train_early = vog_train.finalise(True).cpu().numpy()
-            vog_results_train_late = vog_train.finalise(False).cpu().numpy()
+            vog_results_train_early = vog_train.finalise(early=True).cpu().numpy()
+            vog_results_train_late = vog_train.finalise(late=False).cpu().numpy()
+            vog_results_train = vog_train.finalise().cpu().numpy()
             # vog_train.visualise()
             training_metrics_df = mc_dropout_inference(
                 model,
@@ -176,6 +187,7 @@ def training_loop(
             training_metrics_df = training_metrics_df.set_index("Index")
             training_metrics_df["Variance_of_Gradients_Early"] = vog_results_train_early
             training_metrics_df["Variance_of_Gradients_Late"] = vog_results_train_late
+            training_metrics_df["vog"] = vog_results_train
 
             if is_classification:
                 training_metrics_df["Learning_Speed"] = calculate_learning_speed(
@@ -227,12 +239,15 @@ def training_loop(
                 checkpoint = {
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
+                    "epoch_wise_classification_matrices": epoch_wise_classification_matrices,
+                    "epoch_wise_classification_matrices_test": epoch_wise_classification_matrices_test,
                 }
                 torch.save(checkpoint, f"checkpoints/checkpoint_seed{seed}.pth")
 
                 # calculate test metrics
-                vog_results_test_early = vog_test.finalise(True).cpu().numpy()
-                vog_results_test_late = vog_test.finalise(False).cpu().numpy()
+                vog_results_test_early = vog_test.finalise(early=True).cpu().numpy()
+                vog_results_test_late = vog_test.finalise(late=True).cpu().numpy()
+                vog_results_test = vog_test.finalise().cpu().numpy()
                 # vog_test.visualise()
                 test_metrics_df = mc_dropout_inference(
                     model,
@@ -247,6 +262,7 @@ def training_loop(
                 test_metrics_df = test_metrics_df.set_index("Index")
                 test_metrics_df["Variance_of_Gradients_Early"] = vog_results_test_early
                 test_metrics_df["Variance_of_Gradients_Late"] = vog_results_test_late
+                test_metrics_df["vog"] = vog_results_test
 
                 if is_classification:
                     test_metrics_df["Learning_Speed"] = calculate_learning_speed(

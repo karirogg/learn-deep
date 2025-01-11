@@ -101,6 +101,8 @@ class Replay:
         idcs_sum = 0
         for metric, weight in self.weights.items():
             if metrics.get(metric, None) is None or metrics[metric].ndim == 0:
+                print(f"WARNING: metric {metric} not found or has wrong shape, skipping...")
+                print("available metrics:", self.weights.keys())
                 continue
             # pdb.set_trace()
             if metric not in ["learning_speed", "vog", "variance_of_gradients"]:
