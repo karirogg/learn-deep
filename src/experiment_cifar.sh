@@ -23,7 +23,7 @@ for seed in "${seeds[@]}"; do
     PYTHONUNBUFFERED=1 python -m models.cifar.train \
         --n 2 \
         --classes 100 \
-        --epochs 50 \
+        --epochs 10 \
         --replay-buffer uniform \
         --buffer-size 10 \
         --cutoff-lower 20 \
@@ -51,12 +51,12 @@ for seed in "${seeds[@]}"; do
         PYTHONUNBUFFERED=1 python -m models.cifar.train \
             --n 2 \
             --classes 100 \
-            --epochs 50 \
+            --epochs 10 \
             --replay-buffer simple_sorted \
             --buffer-size 10 \
             --cutoff-lower 20 \
             --cutoff-upper 20 \
-            --replay_weights "$replay_weights" \
+            --replay-weights "$replay_weights" \
             --use_checkpoint \
             --seed "$seed" | tee -a "$output_file"
     done
