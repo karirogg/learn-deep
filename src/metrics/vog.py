@@ -7,69 +7,78 @@ from tqdm import tqdm
 
 
 class VoG:
-    
-    def __init__(self, dataloader, epochs_per_task, num_checkpoints, task_id, max_task_id, is_classification):
+
+    def __init__(
+        self, dataloader, epochs_per_task, num_checkpoints, task_id, is_classification
+    ):
         self.dataloader = dataloader
-        self.checkpoint_idcs = np.linspace(0, epochs_per_task, num_checkpoints, endpoint=False, dtype=np.int32) # iterations at which to store gradients
+        self.checkpoint_idcs = np.linspace(
+            0, epochs_per_task, num_checkpoints, endpoint=False, dtype=np.int32
+        )[
+            :-3
+        ]  # iterations at which to store gradients
         self.gradient_matrices = []
         self.task_id = task_id
-        self.max_task_id = max_task_id
         self.is_classification = is_classification
         self.result = None
-        
-    def update(self, model, epoch_idx):
-        if self.task_id == self.max_task_id or not epoch_idx in self.checkpoint_idcs:
+
+    def update(self, model, task_id, epoch_idx):
+        if self.task_id != task_id or not epoch_idx in self.checkpoint_idcs:
             return
         model.eval()
         gradients = []
         idx_list = []
         for inputs, labels, idcs in self.dataloader:
-            inputs = inputs.clone()
             inputs.requires_grad = True
             ones = torch.ones(labels.shape).to(inputs.device)
-            logits = model(inputs, task_id=0)
+            logits = model(inputs, task_id)  # [batch_size, num_classes/output_dim]
 
             selected_logits = None 
 
             if len(logits.shape) == 1:
                 selected_logits = logits[torch.arange(labels.shape[0])]
             else:
+                # probs = torch.nn.functional.softmax(logits, dim=1)
                 selected_logits = logits[torch.arange(labels.shape[0]), labels]
-                
-            selected_logits.backward(ones)
 
-            gradients.append(inputs.grad.data)
+            selected_logits.backward(ones)
+            gradients.append(inputs.grad.detach())
             idx_list.append(idcs)
         idx_list = torch.cat(idx_list)
         gradients = torch.cat(gradients, dim=0)
-        sorted_gradients = torch.zeros_like(gradients)
-        for i, idx in enumerate(idx_list):
-            sorted_gradients[idx] = gradients[i]
+        sorted_gradients = torch.zeros_like(gradients)  # [num_examples, C, H, W]
+        sorted_gradients[idx_list] = gradients
         if self.is_classification:
-            sorted_gradients = sorted_gradients.mean(axis=1) # average over channels
-
+            sorted_gradients = sorted_gradients.mean(dim=1)  # average over channels
         self.gradient_matrices.append(sorted_gradients)
         return
-    
+
     def finalise(self):
-        gradient_matrices = torch.stack(self.gradient_matrices)
-        grad_means = torch.mean(gradient_matrices, axis=0)
-        grad_variances = np.sqrt(1 / len(self.checkpoint_idcs)) * torch.sum(torch.pow(gradient_matrices - grad_means.unsqueeze(0), 2), axis=0)
+        gradient_matrices = torch.stack(
+            self.gradient_matrices, dim=0
+        )  # [K, num_examples, H, W]
+        grad_means = torch.mean(gradient_matrices, dim=0)  # [num_examples, H, W]
+        grad_variances = (
+            gradient_matrices - grad_means.unsqueeze(0)
+        ) ** 2  # [K, num_examples, H, W]
+        grad_variances = (
+            1.0 / np.sqrt(self.checkpoint_idcs.size) * torch.sum(grad_variances, dim=0)
+        )  # [num_examples, H, W]
         if self.is_classification:
-            grad_variances = grad_variances.mean(axis=[1, 2]) # average over pixels 
+            grad_variances = grad_variances.mean(dim=[1, 2])  # average over pixels
             # normalise per class
             # normalised_grad_variances = [(grad_variances - grad_variances.mean()) / grad_variances.std()]
             # normalised_grad_variances = []
             # for l in epoch_labels.unique():
             #     class_grad_variances = grad_variances[epoch_labels == l]
             #     normalized_class_values = (class_grad_variances - class_grad_variances.mean()).abs() / class_grad_variances.std()
-            #     normalised_grad_variances.append(normalized_class_values) 
+            #     normalised_grad_variances.append(normalized_class_values)
         else:
             grad_variances = grad_variances.mean(axis=1)
 
         self.result = grad_variances
         return grad_variances
-    
+
     def visualise(self, num_imgs=10):
         if not self.is_classification or self.result is None:
             return
