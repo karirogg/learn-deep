@@ -53,7 +53,7 @@ if __name__ == "__main__":
     wandb.init(project="learn-deep", config=model_config, mode="online" if args.wandb else "disabled")
 
     # TODO: Possibly use lower learning rate
-    optimizer = torch.optim.Adam(model.parameters(), lr=3e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-6)
 
     # TODO: After we have verified that task incremental learning works well, we will want to use SGD with momentum and a scheduler
     # optimizer = torch.optim.SGD(
