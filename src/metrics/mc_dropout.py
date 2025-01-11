@@ -44,7 +44,7 @@ def mc_dropout_inference(
     all_labels = torch.zeros(dataset_len, device=device, dtype=torch.long)
 
     if not classification:
-         all_labels = torch.zeros(dataset_len, device=device, dtype=torch.float32)
+        all_labels = torch.zeros(dataset_len, device=device, dtype=torch.float32)
 
     with torch.no_grad():
         for inputs, labels, indices in tqdm(
@@ -100,4 +100,10 @@ def mc_dropout_inference(
         )
         return df
 
-    return mean_predictions.cpu().numpy().squeeze(), variances.cpu().numpy().squeeze()
+    return pd.DataFrame(
+        {
+            "Index": np.arange(0, dataset_len, 1),
+            "MC_Mean": mean_predictions.cpu().numpy().squeeze(),
+            "MC_Variance": variances.cpu().numpy().squeeze(),
+        }
+    )

@@ -103,7 +103,7 @@ class Replay:
             if metrics.get(metric, None) is None or metrics[metric].ndim == 0:
                 continue
             # pdb.set_trace()
-            if metric != "learning_speed":
+            if metric not in ["learning_speed", "vog", "variance_of_gradients"]:
                 sorted_idcs = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics[metric][i]))
             else:
                 sorted_idcs = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics[metric][i], reverse=True))
