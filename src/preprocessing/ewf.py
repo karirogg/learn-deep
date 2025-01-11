@@ -15,12 +15,24 @@ import numpy as np
 # # concat data
 # ewf_data = pd.concat(ewf_data)
 
-ewf_data = pd.read_csv('../ewf-raw/wf1.csv')
+ewf_data_list = []
+
+for i in range(1,12):
+    if i == 2:
+        continue
+
+    ewf_data_list.append(pd.read_csv(f'../ewf-raw/wf{i}.csv'))
+
+ewf_data = pd.concat(ewf_data_list)
+
 ewf_test_data = pd.read_csv('../ewf-raw/wf2.csv')
 
 # only include the first year in the data
 ewf_data = ewf_data[ewf_data['Time'].str[:4] == '0000']
 ewf_test_data = ewf_test_data[ewf_test_data['Time'].str[:4] == '0000']
+
+ewf_data.sort_values(by='Time', inplace=True)
+ewf_test_data.sort_values(by='Time', inplace=True)
 
 # split data evenly into 4 tasks
 task_size = len(ewf_data) // 4
