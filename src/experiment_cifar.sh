@@ -22,6 +22,9 @@ for seed in "${seeds[@]}"; do
         --classes 100 \
         --epochs 50 \
         --replay-buffer uniform \
+        --buffer-size 10 \
+        --cutoff-lower 20 \
+        --cutoff-upper 20 \
         --store_checkpoint \
         --seed "$seed" | tee -a "$output_file"
 
@@ -47,6 +50,9 @@ for seed in "${seeds[@]}"; do
             --classes 100 \
             --epochs 50 \
             --replay-buffer simple_sorted \
+            --buffer-size 10 \
+            --cutoff-lower 20 \
+            --cutoff-upper 20 \
             --replay_weights "$replay_weights" \
             --use_checkpoint \
             --seed "$seed" | tee -a "$output_file"

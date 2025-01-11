@@ -28,10 +28,13 @@ if __name__ == "__main__":
     parser.add_argument("--wandb", action="store_true")
     parser.add_argument("--classes", action="store", type=int, default=10, help="Number of classes")
     parser.add_argument("--replay-buffer", action="store", type=str, default=None, help="Replay buffer strategy")
-    parser.add_argument("--replay_weights", type=str, default="{}") # example: --replay_weights '{"vog": 1.0, "learning_speed": 1.0, "predictive_entropy": 1.0, "mutual_information": 1.0, "variation_ratio": 1.0, "mean_std_deviation": 1.0, "mc_variance": 0.0}' NOTE: mc_variance should have zero weight for classification
+    parser.add_argument("--replay-weights", type=str, default="{}") # example: --replay_weights '{"vog": 1.0, "learning_speed": 1.0, "predictive_entropy": 1.0, "mutual_information": 1.0, "variation_ratio": 1.0, "mean_std_deviation": 1.0, "mc_variance": 0.0}' NOTE: mc_variance should have zero weight for classification
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--store_checkpoint", action="store_true")
     parser.add_argument("--use_checkpoint", action="store_true")
+    parser.add_argument("--buffer-size", action="store", type=int, default=10, help="Size of replay buffer (percentage of training set)")
+    parser.add_argument("--cutoff-lower", action="store", type=int, default=20, help="Percentage of lower cutoff")
+    parser.add_argument("--cutoff-upper", action="store", type=int, default=20, help="Percentage of upper cutoff")
 
     args = parser.parse_args()
     fix_seed(args.seed)
@@ -60,9 +63,9 @@ if __name__ == "__main__":
 
     train_tasks, test_tasks = preprocess_cifar(num_classes, n, batch_size, device)
 
-    replay_params = {"remove_lower_percent" : 20, "remove_upper_percent" : 20}
+    replay_params = {"remove_lower_percent" : args.cutoff_lower, "remove_upper_percent" : args.cutoff_upper}
     replay_weights = json.loads(args.replay_weights)
-    replay_buffer = Replay(replay_params, strategy=args.replay_buffer, batch_size=replay_batch_size, num_tasks=n, weights=replay_weights)
+    replay_buffer = Replay(replay_params, strategy=args.replay_buffer, batch_size=replay_batch_size, samples_to_add=len(train_tasks[0].dataset) * args.buffer_size // 100, num_tasks=n, weights=replay_weights)
 
     if args.replay_buffer:
         print("running with replay strategy:", args.replay_buffer)
@@ -84,7 +87,6 @@ if __name__ == "__main__":
         metric=accuracy,
         evaluate=evaluate,
         replay_buffer=replay_buffer,
-        max_replay_buffer_size=5000,
         epochs_per_task=epochs_per_task,
         num_checkpoints=num_checkpoints,
         is_classification=True,
@@ -105,6 +107,16 @@ if __name__ == "__main__":
     print("creating plots...")
     task_name = f'cifar_{num_classes}_n_{n}_epochs_{epochs_per_task}_replay_{replay_buffer_details}_seed_{args.seed}'
 
+    if not os.path.exists('../img'):
+        os.mkdir('../img')
+
+    if not os.path.exists('../img/cifar'):
+        os.mkdir('../img/cifar')
+
+    if not os.path.exists('../img/cifar/task_progression'):
+        os.mkdir('../img/cifar/task_progression')
+        os.mkdir('../img/cifar/heatmaps')
+
     for i, task in enumerate(test_tasks):
         task_progression = []
         for j in range(len(test_tasks)):
@@ -120,16 +132,6 @@ if __name__ == "__main__":
 
     plt.legend()
 
-    if not os.path.exists('../img'):
-        os.mkdir('../img')
-
-    if not os.path.exists('../img/cifar'):
-        os.mkdir('../img/cifar')
-
-    if not os.path.exists('../img/cifar/task_progression'):
-        os.mkdir('../img/cifar/task_progression')
-        os.mkdir('../img/cifar/heatmaps')
-
     plt.xlabel('Epoch')
     plt.ylabel('Classification Accuracy')
 
@@ -137,6 +139,31 @@ if __name__ == "__main__":
     plt.ylim(0, 1)
 
     plt.savefig(f"../img/cifar/task_progression/{task_name}_test.pdf")
+    plt.close()
+
+
+    for i, task in enumerate(train_tasks):
+        task_progression = []
+        for j in range(len(train_tasks)):
+            task_progression.append(
+                torch.mean(epoch_wise_classification_matrices[i][:, j, :], dim=0)
+            )
+
+        plt.plot(
+            np.arange(len(train_tasks) * epochs_per_task),
+            np.concatenate(task_progression, axis=0),
+            label=f"Task {i+1}",
+        )
+
+    plt.legend()
+
+    plt.xlabel('Epoch')
+    plt.ylabel('Classification Accuracy')
+
+    plt.xlim(0, len(train_tasks) * epochs_per_task)
+    plt.ylim(0, 1)
+
+    plt.savefig(f"../img/cifar/task_progression/{task_name}_train.pdf")
     plt.close()
 
     for i, task in enumerate(train_tasks):

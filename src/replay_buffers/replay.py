@@ -5,7 +5,7 @@ import pdb
 
 class Replay:
 
-    def __init__(self, params=None, strategy=None, batch_size=8, num_tasks=2, weights={}):
+    def __init__(self, params=None, strategy=None, batch_size=8, samples_to_add=10000, num_tasks=2, weights={}):
         self.params = params
 
         self.X_list = []
@@ -22,8 +22,9 @@ class Replay:
         else:
             self.strategy = None
 
-        self.batch_size = 8
+        self.batch_size = batch_size
         self.num_tasks = num_tasks
+        self.samples_to_add = samples_to_add
 
     def reset(self):
         if len(self.X_list) > 0:
@@ -60,7 +61,7 @@ class Replay:
 
         return out
 
-    def uniform(self, model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, task_id: int, metrics=None, samples_to_add: int = 10000):
+    def uniform(self, model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, task_id: int, metrics=None):
         """
         A simple replay buffer that samples uniformly from a dataloader.
         """
@@ -78,11 +79,12 @@ class Replay:
 
             num_samples_added += len(y)
 
-            if num_samples_added >= samples_to_add:
+            if num_samples_added >= self.samples_to_add:
                 break    
 
-    def simple_sorted(self, model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, task_id: int, metrics, samples_to_add: int = 10000):
+    def simple_sorted(self, model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, task_id: int, metrics):
         print("populating replay buffer...", end= " ")
+
         # collect inputs
         unsorted_input_images, unsorted_labels, idx_list = map(torch.cat, zip(*[(img, labels, idcs) for img, labels, idcs in dataloader]))
         unsorted_input_images = unsorted_input_images.detach().to(torch.float32)
@@ -107,7 +109,7 @@ class Replay:
         lower_boundary = self.params["remove_lower_percent"] * len(sorted_idcs) // 100
         upper_boundary = len(sorted_idcs) - self.params["remove_upper_percent"] * len(sorted_idcs) // 100
         filtered_idcs = sorted_idcs[lower_boundary:upper_boundary]
-        selected_idcs = np.random.choice(filtered_idcs, size=min(int(samples_to_add), len(filtered_idcs)), replace=False)
+        selected_idcs = np.random.choice(filtered_idcs, size=min(int(self.samples_to_add), len(filtered_idcs)), replace=False)
         # return in correct format (list of tensors of shape [batch_size, :, :, :] and [batch_size])
         for i in range(0, len(selected_idcs), dataloader.batch_size):
             idcs = selected_idcs[i : i+dataloader.batch_size]
