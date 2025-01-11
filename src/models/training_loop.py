@@ -82,10 +82,17 @@ def training_loop(
         # start training
         print(f"Training on task {task_id + 1}")
 
+        # Initialize variance_of_gradients classes for each task except for the last
         if task_id < len(train_tasks) - 1:
-            # Initialize variance_of_gradients class for each task except for the last
-            vog = VoG(
+            vog_train = VoG(
                 task, epochs_per_task, num_checkpoints, task_id, is_classification
+            )
+            vog_test = VoG(
+                test_tasks[task_id],
+                epochs_per_task,
+                num_checkpoints,
+                task_id,
+                is_classification,
             )
 
         if frozen[task_id]:
@@ -128,10 +135,11 @@ def training_loop(
                 loss.backward()
 
                 optimizer.step()
-                
+
             wandb.log({f"train-loss_task-{task_id}": loss})
 
-            vog.update(model, task_id, epoch)
+            vog_train.update(model, task_id, epoch)
+            vog_test.update(model, task_id, epoch)
 
             for j, task_test in enumerate(test_tasks):
                 _, _, sample_wise_accuracy = evaluate(model, task_test, criterion, device, metric, j)
@@ -147,87 +155,110 @@ def training_loop(
                     :, task_id, epoch
                 ] = sample_wise_accuracy
 
-        # TODO: Also save all metrics directly for the test set as well
-        if task_id < len(train_tasks)-1:
+        if task_id < len(train_tasks) - 1 and (
+            replay_buffer.strategy is not None or store_checkpoint
+        ):
 
-            if replay_buffer.strategy is not None or store_checkpoint:
-                # calculate all metrics
-                vog_results = vog.finalise().cpu().numpy()
-                # vog.visualise()
-                dummy = np.zeros_like(vog_results)
+            # calculate training metrics
+            vog_results_train_early = vog_train.finalise(True).cpu().numpy()
+            vog_results_train_late = vog_train.finalise(False).cpu().numpy()
+            # vog_train.visualise()
+            training_metrics_df = mc_dropout_inference(
+                model,
+                task,
+                task_id,
+                device,
+                replay_buffer.weights,
+                num_samples=100,
+                classification=is_classification,
+                store_checkpoint=store_checkpoint,
+            )
+            training_metrics_df = training_metrics_df.set_index("Index")
+            training_metrics_df["Variance_of_Gradients_Early"] = vog_results_train_early
+            training_metrics_df["Variance_of_Gradients_Late"] = vog_results_train_late
+
+            if is_classification:
+                training_metrics_df["Learning_Speed"] = calculate_learning_speed(
+                    epoch_wise_classification_matrices
+                )[task_id]
+
+            if replay_buffer.strategy is not None:
+                # replay buffer expects a dictionary
+                dummy = np.zeros_like(vog_results_train_late)
+
                 if is_classification:
-                    metrics_df = mc_dropout_inference(
-                        model,
-                        task,
-                        task_id,
-                        device,
-                        replay_buffer.weights,
-                        num_samples=100,
-                        classification=is_classification,
-                        store_checkpoint=store_checkpoint,
-                    )
-                    metrics_df = metrics_df.set_index("Index")
-                    metrics_df["Variance_of_Gradients"] = vog_results
-                    metrics_df["Learning_Speed"] = calculate_learning_speed(
-                        epoch_wise_classification_matrices
-                    )[task_id]
-
-                    # replay buffer expects a dictionary
                     metrics = {
-                        "vog": vog_results,
-                        "learning_speed": metrics_df["Learning_Speed"].to_numpy(),
-                        "predictive_entropy": metrics_df[
+                        "vog": vog_results_train_late,
+                        "learning_speed": training_metrics_df[
+                            "Learning_Speed"
+                        ].to_numpy(),
+                        "predictive_entropy": training_metrics_df[
                             "Predictive_Entropy"
                         ].to_numpy(),
-                        "mutual_information": metrics_df[
+                        "mutual_information": training_metrics_df[
                             "Mutual_Information"
                         ].to_numpy(),
-                        "variation_ratio": metrics_df["Variation_Ratio"].to_numpy(),
-                        "mean_std_deviation": metrics_df[
+                        "variation_ratio": training_metrics_df[
+                            "Variation_Ratio"
+                        ].to_numpy(),
+                        "mean_std_deviation": training_metrics_df[
                             "Mean_Std_Deviation"
                         ].to_numpy(),
                         "mc_variance": dummy,
                     }
                 else:
                     metrics = {
-                        "vog": vog_results,
+                        "vog": vog_results_train_late,
                         "learning_speed": dummy,
                         "predictive_entropy": dummy,
                         "mutual_information": dummy,
                         "variation_ratio": dummy,
                         "mean_std_deviation": dummy,
-                        "mc_variance": mc_dropout_inference(
-                            model,
-                            task,
-                            task_id,
-                            device,
-                            replay_buffer.weights,
-                            num_samples=100,
-                            classification=is_classification,
-                            store_checkpoint=store_checkpoint,
-                        )[1],
+                        "mc_variance": training_metrics_df["MC_Variance"].to_numpy(),
                     }
-                if replay_buffer.strategy is not None:
-                    replay_buffer.strategy(
-                        model,
-                        task,
-                        task_id,
-                        metrics,
-                    )
+                replay_buffer.strategy(
+                    model,
+                    task,
+                    task_id,
+                    metrics,
+                )
 
-                if task_id == 0 and store_checkpoint:
-                    checkpoint = {
-                        'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict()
-                    }
-                    torch.save(checkpoint, 'checkpoints/checkpoint.pth')
-                    filename = f"checkpoints/metrics_seed_{seed}.pkl"
-                    if is_classification:
-                        metrics_df.to_pickle(filename)
-                    else:
-                        with open(filename, "wb") as f:
-                            pickle.dump(metrics, f)
-                    print("stored metrics and training checkpoint")
+            if store_checkpoint:
+                checkpoint = {
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                }
+                torch.save(checkpoint, f"checkpoints/checkpoint_seed{seed}.pth")
+
+                # calculate test metrics
+                vog_results_test_early = vog_test.finalise(True).cpu().numpy()
+                vog_results_test_late = vog_test.finalise(False).cpu().numpy()
+                # vog_test.visualise()
+                test_metrics_df = mc_dropout_inference(
+                    model,
+                    test_tasks[task_id],
+                    task_id,
+                    device,
+                    replay_buffer.weights,
+                    num_samples=100,
+                    classification=is_classification,
+                    store_checkpoint=store_checkpoint,
+                )
+                test_metrics_df = test_metrics_df.set_index("Index")
+                test_metrics_df["Variance_of_Gradients_Early"] = vog_results_test_early
+                test_metrics_df["Variance_of_Gradients_Late"] = vog_results_test_late
+
+                if is_classification:
+                    test_metrics_df["Learning_Speed"] = calculate_learning_speed(
+                        epoch_wise_classification_matrices_test
+                    )[task_id]
+
+                # store both training and test metrics
+                filename = f"checkpoints/seed_{seed}_"
+                training_metrics_df.to_pickle(filename + "training_metrics.pkl")
+                test_metrics_df.to_pickle(filename + "test_metrics.pkl")
+
+                print("stored metrics and training checkpoint")
 
         print(f"Results after training on task {task_id + 1}")            
 

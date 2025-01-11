@@ -13,14 +13,12 @@ class VoG:
     ):
         self.dataloader = dataloader
         self.checkpoint_idcs = np.linspace(
-            0, epochs_per_task, num_checkpoints, endpoint=False, dtype=np.int32
-        )[
-            :-3
-        ]  # iterations at which to store gradients
+            0, epochs_per_task, num_checkpoints + 1, endpoint=True, dtype=np.int32
+        )[1:]
         self.gradient_matrices = []
         self.task_id = task_id
         self.is_classification = is_classification
-        self.result = None
+        self.result = {}
 
     def update(self, model, task_id, epoch_idx):
         if self.task_id != task_id or not epoch_idx in self.checkpoint_idcs:
@@ -53,30 +51,39 @@ class VoG:
         self.gradient_matrices.append(sorted_gradients)
         return
 
-    def finalise(self):
-        gradient_matrices = torch.stack(
-            self.gradient_matrices, dim=0
-        )  # [K, num_examples, H, W]
+    def finalise(self, early=True):
+        # distinguish early and late stage training dynamics
+        if early:
+            gradient_matrices = torch.stack(
+                self.gradient_matrices[:3], dim=0
+            )  # [3, num_examples, H, W]
+        else:
+            gradient_matrices = torch.stack(
+                self.gradient_matrices[-3:], dim=0
+            )  # [3, num_examples, H, W]
+
         grad_means = torch.mean(gradient_matrices, dim=0)  # [num_examples, H, W]
         grad_variances = (
             gradient_matrices - grad_means.unsqueeze(0)
         ) ** 2  # [K, num_examples, H, W]
-        grad_variances = (
-            1.0 / np.sqrt(self.checkpoint_idcs.size) * torch.sum(grad_variances, dim=0)
-        )  # [num_examples, H, W]
+        grad_variances = torch.mean(grad_variances, dim=0)  # [num_examples, H, W]
         if self.is_classification:
             grad_variances = grad_variances.mean(dim=[1, 2])  # average over pixels
             # normalise per class
-            # normalised_grad_variances = [(grad_variances - grad_variances.mean()) / grad_variances.std()]
-            # normalised_grad_variances = []
-            # for l in epoch_labels.unique():
-            #     class_grad_variances = grad_variances[epoch_labels == l]
-            #     normalized_class_values = (class_grad_variances - class_grad_variances.mean()).abs() / class_grad_variances.std()
-            #     normalised_grad_variances.append(normalized_class_values)
+            # for i in range(50):
+            #     class_start = i * 500
+            #     class_variances = grad_variances[class_start : class_start + 500]
+            #     grad_variances[class_start : class_start + 500] = (
+            #         class_variances - class_variances.mean()
+            #     ) / (class_variances.std() + 1e-8)
         else:
             grad_variances = grad_variances.mean(axis=1)
+            # grad_variances = (grad_variances - grad_variances.mean()) / (grad_variances.std() + 1e-8)
 
-        self.result = grad_variances
+        if early:
+            self.result["early"] = grad_variances
+        else:
+            self.result["late"] = grad_variances
         return grad_variances
 
     def visualise(self, num_imgs=10):
