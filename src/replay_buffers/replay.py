@@ -73,6 +73,11 @@ class Replay:
             # detach the tensors since otherwise they keep their gradients
             new_replay_inputs = X.detach().to(torch.float32)
 
+            if num_samples_added + len(y) > self.samples_to_add:
+                num_samples_to_add = self.samples_to_add - num_samples_added
+                new_replay_inputs = new_replay_inputs[:num_samples_to_add]
+                y = y[:num_samples_to_add]
+
             self.X_list.append(new_replay_inputs)
             self.task_list.append(torch.full((len(y),), task_id, dtype=torch.long))
             self.y_list.append(y.detach())
