@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Seeds to iterate over
-seeds=(31 42 69 420 80085)
+seeds=(69 420 80085)
 
 # Replay weight keys
 weights=("vog" "learning_speed" "predictive_entropy" "mutual_information" "variation_ratio" "mean_std_deviation")
@@ -23,11 +23,11 @@ for seed in "${seeds[@]}"; do
     PYTHONUNBUFFERED=1 python -m models.cifar.train \
         --n 2 \
         --classes 100 \
-        --epochs 10 \
+        --epochs 100 \
         --replay-buffer uniform \
         --buffer-size 10 \
         --cutoff-lower 20 \
-        --cutoff-upper 20 \
+        --cutoff-upper 35 \
         --store_checkpoint \
         --seed "$seed" | tee -a "$output_file"
 
@@ -51,11 +51,11 @@ for seed in "${seeds[@]}"; do
         PYTHONUNBUFFERED=1 python -m models.cifar.train \
             --n 2 \
             --classes 100 \
-            --epochs 10 \
+            --epochs 100 \
             --replay-buffer simple_sorted \
             --buffer-size 10 \
             --cutoff-lower 20 \
-            --cutoff-upper 20 \
+            --cutoff-upper 35 \
             --replay-weights "$replay_weights" \
             --use_checkpoint \
             --seed "$seed" | tee -a "$output_file"
