@@ -14,6 +14,10 @@ from metrics.vog import VoG
 from metrics.learning_speed import calculate_learning_speed
 from metrics.mc_dropout import mc_dropout_inference
 
+def update_learning_rate(optimizer, new_lr):
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = new_lr
+
 def training_loop(
     train_tasks: list[torch.utils.data.DataLoader],
     test_tasks: list[torch.utils.data.DataLoader],
@@ -92,9 +96,7 @@ def training_loop(
             continue
 
         if task_id != 0:
-            new_lr = initial_lr * lr_decay
-            for param_group in optimizer.param_groups:
-                param_group['lr'] = new_lr
+            update_learning_rate(optimizer, initial_lr / 2)
         # print(f"State before training on task {task_id}:\nmodel: {model.state_dict}\noptimizer: {optimizer.state_dict}\nmetrics: {metrics}")
         # start training
         print(f"Training on task {task_id + 1}")
@@ -123,6 +125,9 @@ def training_loop(
         for epoch in pbar:
             replay_buffer.reset()
             model.train()
+
+            if task_id != 0 and epoch == epochs_per_task // 2:
+                update_learning_rate(optimizer, initial_lr * lr_decay)
 
             for inputs, labels, _ in task:
 

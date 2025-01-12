@@ -54,7 +54,7 @@ if __name__ == "__main__":
 
     # TODO: Possibly optimize further
     initial_lr = 5e-4
-    lr_decay = 0.1
+    lr_decay = 0.25
     
     optimizer = torch.optim.Adam(model.parameters(), lr=initial_lr, weight_decay=5e-5)
 
