@@ -26,7 +26,7 @@ if __name__ == "__main__":
     parser.add_argument("--n", action="store", type=int, default=2, help="Number of tasks")
     parser.add_argument("--epochs", action="store", type=int, default=10, help="Number of epochs")
     parser.add_argument("--wandb", action="store_true")
-    parser.add_argument("--classes", action="store", type=int, default=10, help="Number of classes")
+    parser.add_argument("--classes", action="store", type=int, default=100, help="Number of classes")
     parser.add_argument("--replay-buffer", action="store", type=str, default=None, help="Replay buffer strategy")
     parser.add_argument("--replay-weights", type=str, default="{}") # example: --replay-weights '{"vog": 1.0, "learning_speed": 1.0, "predictive_entropy": 1.0, "mutual_information": 1.0, "variation_ratio": 1.0, "mean_std_deviation": 1.0, "mc_variance": 0.0}' NOTE: mc_variance should have zero weight for classification
     parser.add_argument("--seed", type=int, default=42)
@@ -53,7 +53,15 @@ if __name__ == "__main__":
     wandb.init(project="learn-deep", config=model_config, mode="online" if args.wandb else "disabled")
 
     # TODO: Possibly optimize further
-    optimizer = torch.optim.Adam(model.parameters(), lr=3e-4, weight_decay=5e-5)
+    initial_lr = 5e-4
+    lr_decay = 0.1
+    
+    optimizer = torch.optim.Adam(model.parameters(), lr=initial_lr, weight_decay=5e-5)
+
+    # optimizer = torch.optim.SGD(
+    #     model.parameters(), lr=1e-3, momentum=0.9, weight_decay=4e-4
+    # )
+    # scheduler = CosineAnnealingLR(optimizer, T_max=epochs_per_task)
 
     criterion = torch.nn.CrossEntropyLoss()
 
@@ -97,6 +105,8 @@ if __name__ == "__main__":
         is_classification=True,
         store_checkpoint=args.store_checkpoint,
         use_checkpoint=args.use_checkpoint,
+        initial_lr=initial_lr,
+        lr_decay=lr_decay,
         seed=args.seed,
     )
 

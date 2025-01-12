@@ -53,6 +53,8 @@ if __name__ == "__main__":
     wandb.init(project="learn-deep", config=model_config, mode="online" if args.wandb else "disabled")
 
     # TODO: Possibly use lower learning rate
+    initial_lr = 5e-6
+    lr_decay = 1
     optimizer = torch.optim.Adam(model.parameters(), lr=5e-6)
 
     # TODO: After we have verified that task incremental learning works well, we will want to use SGD with momentum and a scheduler
@@ -122,7 +124,6 @@ if __name__ == "__main__":
             test_tasks=test_tasks,
             model=model,
             optimizer=optimizer,
-            # scheduler=scheduler,
             criterion=criterion,
             device=device,
             metric=mse,
@@ -132,7 +133,10 @@ if __name__ == "__main__":
             num_checkpoints=num_checkpoints,
             is_classification=False,
             store_checkpoint=args.store_checkpoint,
-            use_checkpoint=args.use_checkpoint
+            use_checkpoint=args.use_checkpoint,
+            seed=args.seed,
+            initial_lr=initial_lr,
+            lr_decay=lr_decay,
         )
     )
 
