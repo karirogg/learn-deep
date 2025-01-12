@@ -27,7 +27,7 @@ for seed in "${seeds[@]}"; do
         --replay-buffer uniform \
         --buffer-size 10 \
         --cutoff-lower 20 \
-        --cutoff-upper 35 \
+        --cutoff-upper 20 \
         --store_checkpoint \
         --seed "$seed" | tee -a "$output_file"
 
@@ -55,9 +55,11 @@ for seed in "${seeds[@]}"; do
             --replay-buffer simple_sorted \
             --buffer-size 10 \
             --cutoff-lower 20 \
-            --cutoff-upper 35 \
+            --cutoff-upper 20 \
             --replay-weights "$replay_weights" \
             --use_checkpoint \
             --seed "$seed" | tee -a "$output_file"
     done
 done
+
+python extract_results.py
