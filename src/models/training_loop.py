@@ -6,13 +6,13 @@ import numpy as np
 import pdb
 import pickle
 import sys
+import copy
 
 from replay_buffers.replay import Replay
 
 from metrics.vog import VoG
 from metrics.learning_speed import calculate_learning_speed
 from metrics.mc_dropout import mc_dropout_inference
-
 
 def training_loop(
     train_tasks: list[torch.utils.data.DataLoader],
@@ -39,6 +39,8 @@ def training_loop(
     is_classification: bool,
     store_checkpoint: bool = False,
     use_checkpoint: bool = False,
+    initial_lr: float = 5e-4,
+    lr_decay: float = 0.1, # this parameter defines how much the lr decayse after training on the first task
     seed: int = 42,
 ) -> list[float]:
     """
@@ -110,7 +112,10 @@ def training_loop(
                 param.requires_grad = True  # unfreeze current classification head
             frozen[task_id] = False
 
-        for epoch in tqdm(range(epochs_per_task), file=sys.stderr):
+        
+        pbar = tqdm(range(epochs_per_task), file=sys.stderr)
+
+        for epoch in pbar:
             replay_buffer.reset()
             model.train()
 
@@ -151,19 +156,24 @@ def training_loop(
             vog_train.update(model, task_id, epoch)
             vog_test.update(model, task_id, epoch)
 
+            accuracy_summary = ''
+
             for j, task_test in enumerate(test_tasks):
-                _, _, sample_wise_accuracy = evaluate(model, task_test, criterion, device, metric, j)
+                _, test_accuracy, sample_wise_accuracy = evaluate(model, task_test, criterion, device, metric, j)
 
                 epoch_wise_classification_matrices_test[j][
                     :, task_id, epoch
                 ] = sample_wise_accuracy
 
-            for j, task_train in enumerate(train_tasks):
-                _, _, sample_wise_accuracy = evaluate(model, task_train, criterion, device, metric, j)
+                _, train_accuracy, sample_wise_accuracy = evaluate(model, train_tasks[j], criterion, device, metric, j)
 
                 epoch_wise_classification_matrices[j][
                     :, task_id, epoch
                 ] = sample_wise_accuracy
+
+                accuracy_summary += f"Task {j}: Test: {test_accuracy:.4f} Train: {train_accuracy:.4f}, "
+
+            pbar.set_description(accuracy_summary)
 
         if task_id < len(train_tasks) - 1 and (
             replay_buffer.strategy is not None or store_checkpoint
@@ -289,6 +299,11 @@ def training_loop(
 
                 print(f'Task {j+1} test loss: {test_loss}')
                 print(f'Task {j+1} test accuracy: {test_accuracy}')
+
+        if task_id == 0:
+            new_lr = initial_lr * lr_decay
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = new_lr
 
     return (
         task_test_losses,
