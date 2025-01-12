@@ -90,6 +90,11 @@ def training_loop(
                 is_classification,
             )
             continue
+
+        if task_id != 0:
+            new_lr = initial_lr * lr_decay
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = new_lr
         # print(f"State before training on task {task_id}:\nmodel: {model.state_dict}\noptimizer: {optimizer.state_dict}\nmetrics: {metrics}")
         # start training
         print(f"Training on task {task_id + 1}")
@@ -299,11 +304,6 @@ def training_loop(
 
                 print(f'Task {j+1} test loss: {test_loss}')
                 print(f'Task {j+1} test accuracy: {test_accuracy}')
-
-        if task_id == 0:
-            new_lr = initial_lr * lr_decay
-            for param_group in optimizer.param_groups:
-                param_group['lr'] = new_lr
 
     return (
         task_test_losses,
