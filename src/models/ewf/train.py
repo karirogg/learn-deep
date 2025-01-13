@@ -55,7 +55,7 @@ if __name__ == "__main__":
     # TODO: Possibly use lower learning rate
     initial_lr = 5e-6
     lr_decay = 1
-    optimizer = torch.optim.Adam(model.parameters(), lr=5e-6)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
 
     # TODO: After we have verified that task incremental learning works well, we will want to use SGD with momentum and a scheduler
     # optimizer = torch.optim.SGD(
@@ -150,7 +150,7 @@ if __name__ == "__main__":
                 replay_buffer_details += f'_{key}_{round(value, 2)}'
 
     print("creating plots...")
-    task_name = f'ewf_epochs_{epochs_per_task}_replay_{replay_buffer_details}_seed_{args.seed}'
+    task_name = f'ewf_epochs_{epochs_per_task}_replay_{replay_buffer_details}_seed_{args.seed}_lower_{args.cutoff_lower}_upper_{args.cutoff_upper}'
 
     if not os.path.exists('../img/'):
         os.mkdir('../img')

@@ -7,7 +7,7 @@ seeds=(31 42 69 420 80085)
 weights=("vog" "learning_speed" "mc_variance")
 
 # Output file
-output_file="results.txt"
+output_file="ewf_results.txt"
 
 # Clear the output file before running
 > "$output_file"
@@ -16,11 +16,14 @@ output_file="results.txt"
 for seed in "${seeds[@]}"; do
     echo "Running experiments for seed: $seed" | tee -a "$output_file"
 
-    python -m models.ewf.train \
+    # Force unbuffered output
+    PYTHONUNBUFFERED=1 python -m models.ewf.train \
         --epochs 50 \
         --replay-buffer uniform \
-        --wandb \
-        --seed "$seed" >> "$output_file" 2>&1
+        --buffer-size 10 \
+        --cutoff-lower 20 \
+        --cutoff-upper 35 \
+        --seed "$seed" | tee -a "$output_file"
 
     # Inner loop: Iterate over replay weights
     for weight in "${weights[@]}"; do
@@ -39,11 +42,12 @@ for seed in "${seeds[@]}"; do
         echo "Running with replay weight: $weight set to 1.0" | tee -a "$output_file"
 
         # Run the Python command
-        python -m models.ewf.train \
+        PYTHONUNBUFFERED=1 python -m models.ewf.train \
             --epochs 50 \
             --replay-buffer simple_sorted \
-            --wandb \
-            --replay_weights "$replay_weights" \
-            --seed "$seed" >> "$output_file" 2>&1
+            --buffer-size 10 \
+            --cutoff-lower 20 \
+            --cutoff-upper 35 \
+            --seed "$seed" | tee -a "$output_file"
     done
 done
