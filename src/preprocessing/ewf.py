@@ -52,8 +52,6 @@ for i in range(4):
 
 split_dates.append(ewf_data['Time'].iloc[-1])
 
-print(split_dates)
-
 test_tasks = []
 
 for i in range(4):

@@ -12,6 +12,9 @@ output_file="ewf_results.txt"
 # Clear the output file before running
 > "$output_file"
 
+# run preprocessing
+PYTHONUNBUFFERED=1 python -m preprocessing.ewf
+
 # Outer loop: Iterate over seeds
 for seed in "${seeds[@]}"; do
     echo "Running experiments for seed: $seed" | tee -a "$output_file"
