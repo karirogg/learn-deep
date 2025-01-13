@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#SBATCH --ntasks=8
-#SBATCH --nodes=2
+#SBATCH --ntasks=1
+#SBATCH --nodes=1
 #SBATCH --gpus-per-node=1
 #SBATCH --gpus=rtx_3090:1
 #SBATCH --mem-per-cpu=20G
