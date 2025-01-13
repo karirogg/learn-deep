@@ -19,18 +19,6 @@ PYTHONUNBUFFERED=1 python -m preprocessing.cifar_100 --n 2
 for seed in "${seeds[@]}"; do
     echo "Running experiments for seed: $seed" | tee -a "$output_file"
 
-    # Force unbuffered output
-    PYTHONUNBUFFERED=1 python -m models.cifar.train \
-        --n 2 \
-        --classes 100 \
-        --epochs 100 \
-        --replay-buffer uniform \
-        --buffer-size 10 \
-        --cutoff-lower 20 \
-        --cutoff-upper 20 \
-        --store_checkpoint \
-        --seed "$seed" | tee -a "$output_file"
-
     # Inner loop: Iterate over replay weights
     for weight in "${weights[@]}"; do
         # Create a JSON string with the current weight set to 1.0 and all others to 0.0

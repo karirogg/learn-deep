@@ -182,7 +182,7 @@ def training_loop(
                     :, task_id, epoch
                 ] = sample_wise_accuracy
 
-                accuracy_summary += f"Task {j}: Test: {test_accuracy:.4f} Train: {train_accuracy:.4f}, "
+                accuracy_summary += f"Task {j + 1}: Test: {test_accuracy:.4f} Train: {train_accuracy:.4f}, "
 
             pbar.set_description(accuracy_summary)
 
