@@ -6,6 +6,7 @@ import wandb
 import numpy as np
 import pdb
 import json
+import pickle
 
 from replay_buffers.replay import Replay
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -55,7 +56,7 @@ if __name__ == "__main__":
     # TODO: Possibly optimize further
     initial_lr = 5e-4
     lr_decay = 0.25
-    
+
     optimizer = torch.optim.Adam(model.parameters(), lr=initial_lr, weight_decay=5e-5)
 
     # optimizer = torch.optim.SGD(
@@ -156,7 +157,6 @@ if __name__ == "__main__":
     plt.savefig(f"../img/cifar/task_progression/{task_name}_test.pdf")
     plt.close()
 
-
     for i, task in enumerate(train_tasks):
         task_progression = []
         for j in range(len(train_tasks)):
@@ -219,15 +219,21 @@ if __name__ == "__main__":
         plt.close()
 
     print("done")
-    if args.store_checkpoint:
-        # Save final example wise accuracies of task 1 examples
-        final_acc_train = epoch_wise_classification_matrices[0][:, -1, -1].cpu().numpy()
-        final_acc_test = (
-            epoch_wise_classification_matrices_test[0][:, -1, -1].cpu().numpy()
-        )
 
-        np.save(f"checkpoints/cifar_final_acc_seed_{args.seed}_train.npy", final_acc_train)
-        np.save(f"checkpoints/cifar_final_acc_seed_{args.seed}_test.npy", final_acc_test)
+    if args.store_checkpoint and replay_buffer.strategy == None:
+        # Save epoch_wise classification matrices
+        matrices_train = torch.stack(epoch_wise_classification_matrices, dim=0).detach()
+        matrices_test = torch.stack(
+            epoch_wise_classification_matrices_test, dim=0
+        ).detach()
+
+        with open(f"checkpoints/matrices_train_seed{args.seed}", "wb") as f:
+            pickle.dump(matrices_train, f)
+
+        with open(f"checkpoints/matrices_test_seed{args.seed}", "wb") as f:
+            pickle.dump(matrices_test, f)
+
+        print("Saved classification_matrices")
 
     for i, (losses, accuracies) in enumerate(
         zip(task_test_losses, task_test_accuracies)
