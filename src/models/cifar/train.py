@@ -120,7 +120,7 @@ if __name__ == "__main__":
                 replay_buffer_details += f'_{key}_{value}'
 
     print("creating plots...")
-    task_name = f'cifar_{num_classes}_n_{n}_epochs_{epochs_per_task}_replay_{replay_buffer_details}_seed_{args.seed}'
+    task_name = f'cifar_{num_classes}_n_{n}_epochs_{epochs_per_task}_replay_{replay_buffer_details}_seed_{args.seed}_lower_{args.cutoff_lower}_upper_{args.cutoff_upper}'
 
     if not os.path.exists('../img'):
         os.mkdir('../img')

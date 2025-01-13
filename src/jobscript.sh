@@ -3,8 +3,13 @@
 #SBATCH --ntasks=8
 #SBATCH --nodes=2
 #SBATCH --gpus-per-node=1
-#SBATCH --gpus=a100_80gb:1
-#SBATCH --mem-per-cpu=200G
+#SBATCH --gpus=rtx_3090:1
+#SBATCH --mem-per-cpu=20G
 #SBATCH --time=2880
 
-command bash experiment_cifar.sh
+# Access the variables passed via sbatch --export
+seed=${seed}    # Default value if not provided
+lower=${lower} # Default value if not provided
+upper=${upper} # Default value if not provided
+
+command bash single_experiment.sh -s $seed -l $lower -u $upper
