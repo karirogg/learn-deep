@@ -7,6 +7,7 @@ import pdb
 import pickle
 import sys
 import copy
+import pandas as pd
 
 from replay_buffers.replay import Replay
 
@@ -181,7 +182,7 @@ def training_loop(
                     :, task_id, epoch
                 ] = sample_wise_accuracy
 
-                accuracy_summary += f"Task {j}: Test: {test_accuracy:.4f} Train: {train_accuracy:.4f}, "
+                accuracy_summary += f"Task {j + 1}: Test: {test_accuracy:.4f} Train: {train_accuracy:.4f}, "
 
             pbar.set_description(accuracy_summary)
 
@@ -204,10 +205,11 @@ def training_loop(
                 classification=is_classification,
                 store_checkpoint=store_checkpoint,
             )
-            training_metrics_df = training_metrics_df.set_index("Index")
-            training_metrics_df["Variance_of_Gradients_Early"] = vog_results_train_early
-            training_metrics_df["Variance_of_Gradients_Late"] = vog_results_train_late
-            training_metrics_df["vog"] = vog_results_train
+            if isinstance(training_metrics_df, pd.DataFrame):
+                training_metrics_df = training_metrics_df.set_index("Index")
+                training_metrics_df["Variance_of_Gradients_Early"] = vog_results_train_early
+                training_metrics_df["Variance_of_Gradients_Late"] = vog_results_train_late
+                training_metrics_df["vog"] = vog_results_train
 
             if is_classification:
                 training_metrics_df["Learning_Speed"] = calculate_learning_speed(
@@ -240,13 +242,13 @@ def training_loop(
                     }
                 else:
                     metrics = {
-                        "vog": vog_results_train_late,
+                        "vog": vog_results_train,
                         "learning_speed": dummy,
                         "predictive_entropy": dummy,
                         "mutual_information": dummy,
                         "variation_ratio": dummy,
                         "mean_std_deviation": dummy,
-                        "mc_variance": training_metrics_df["MC_Variance"].to_numpy(),
+                        "mc_variance": training_metrics_df["MC_Variance"].to_numpy() if isinstance(training_metrics_df, pd.DataFrame) else dummy,
                     }
                 replay_buffer.strategy(
                     model,

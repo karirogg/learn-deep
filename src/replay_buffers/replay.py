@@ -19,6 +19,8 @@ class Replay:
             self.strategy = self.uniform
         elif strategy == "simple_sorted":
             self.strategy = self.simple_sorted
+        elif strategy == "infinity":
+            self.strategy = self.infinity
         else:
             self.strategy = None
 
@@ -89,7 +91,6 @@ class Replay:
 
     def simple_sorted(self, model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, task_id: int, metrics):
         print("populating replay buffer...", end= " ")
-
         # collect inputs
         unsorted_input_images, unsorted_labels, idx_list = map(torch.cat, zip(*[(img, labels, idcs) for img, labels, idcs in dataloader]))
         unsorted_input_images = unsorted_input_images.detach().to(torch.float32)
@@ -104,7 +105,6 @@ class Replay:
                 print(f"WARNING: metric {metric} not found or has wrong shape, skipping...")
                 print("available metrics:", self.weights.keys())
                 continue
-            # pdb.set_trace()
             if metric not in ["learning_speed", "vog", "variance_of_gradients"]:
                 sorted_idcs = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics[metric][i]))
             else:
@@ -126,4 +126,43 @@ class Replay:
         print("done")
         return
         
-    # def validated(self)
+    def infinity(self, model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, task_id: int, metrics):
+        print("populating replay buffer...", end= " ")
+        # collect inputs
+        unsorted_input_images, unsorted_labels, idx_list = map(torch.cat, zip(*[(img, labels, idcs) for img, labels, idcs in dataloader]))
+        unsorted_input_images = unsorted_input_images.detach().to(torch.float32)
+        input_images, labels = torch.zeros_like(unsorted_input_images), torch.zeros_like(unsorted_labels)
+        for i, idx in enumerate(idx_list):
+            input_images[idx] = unsorted_input_images[i]
+            labels[idx] = unsorted_labels[i]
+        # sort by metrics
+        deviations = torch.zeros(labels.shape[0])
+        for metric, weight in self.weights.items():
+            if metrics.get(metric, None) is None or metrics[metric].ndim == 0:
+                print(f"WARNING: metric {metric} not found or has wrong shape, skipping...")
+                print("available metrics:", self.weights.keys())
+                continue
+            if weight == 0:
+                continue
+            print("using:", metric)
+            if metric not in ["learning_speed", "vog", "variance_of_gradients"]:
+                sorted_idcs = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics[metric][i]))
+            else:
+                sorted_idcs = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics[metric][i], reverse=True))
+            inverted_sorting = sorted_idcs.argsort()
+            deviation = inverted_sorting - len(inverted_sorting) / 2.0
+            deviations = torch.where(torch.abs(deviation) >= torch.abs(deviations), deviation, deviations)
+        sorted_idcs = deviations.argsort()
+        # select indices
+        lower_boundary = self.params["remove_lower_percent"] * len(sorted_idcs) // 100
+        upper_boundary = len(sorted_idcs) - self.params["remove_upper_percent"] * len(sorted_idcs) // 100
+        filtered_idcs = sorted_idcs[lower_boundary:upper_boundary]
+        selected_idcs = np.random.choice(filtered_idcs, size=min(int(self.samples_to_add), len(filtered_idcs)), replace=False)
+        # return in correct format (list of tensors of shape [batch_size, :, :, :] and [batch_size])
+        for i in range(0, len(selected_idcs), dataloader.batch_size):
+            idcs = selected_idcs[i : i+dataloader.batch_size]
+            self.X_list.append(input_images[idcs])
+            self.task_list.append(torch.full((len(idcs),), task_id, dtype=torch.long))
+            self.y_list.append(labels[idcs])
+        print("done")
+        return
