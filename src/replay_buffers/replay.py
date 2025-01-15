@@ -17,10 +17,10 @@ class Replay:
         
         if strategy == "uniform":
             self.strategy = self.uniform
-        elif strategy == "simple_sorted":
-            self.strategy = self.simple_sorted
-        elif strategy == "infinity":
-            self.strategy = self.infinity
+        elif strategy == "weighted_mean":
+            self.strategy = self.weighted_mean
+        elif strategy == "mdfm":
+            self.strategy = self.max_dist_from_median
         else:
             self.strategy = None
 
@@ -89,7 +89,7 @@ class Replay:
             if num_samples_added >= self.samples_to_add:
                 break    
 
-    def simple_sorted(self, model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, task_id: int, metrics):
+    def weighted_mean(self, model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, task_id: int, metrics):
         print("populating replay buffer...", end= " ")
         # collect inputs
         unsorted_input_images, unsorted_labels, idx_list = map(torch.cat, zip(*[(img, labels, idcs) for img, labels, idcs in dataloader]))
@@ -126,7 +126,7 @@ class Replay:
         print("done")
         return
         
-    def infinity(self, model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, task_id: int, metrics):
+    def max_dist_from_median(self, model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, task_id: int, metrics):
         print("populating replay buffer...", end= " ")
         # collect inputs
         unsorted_input_images, unsorted_labels, idx_list = map(torch.cat, zip(*[(img, labels, idcs) for img, labels, idcs in dataloader]))

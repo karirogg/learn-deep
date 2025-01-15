@@ -117,7 +117,7 @@ if __name__ == "__main__":
 
     replay_buffer_details = args.replay_buffer
 
-    if args.replay_buffer == 'simple_sorted':
+    if args.replay_buffer == 'weighted_mean':
         for key, value in replay_weights.items():
             if value > 0:
                 replay_buffer_details += f'_{key}_{value}'

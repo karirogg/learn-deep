@@ -52,7 +52,7 @@ for seed in "${seeds[@]}"; do
                 # Run the Python command
                 PYTHONUNBUFFERED=1 python -m models.ewf.train \
                     --epochs 50 \
-                    --replay-buffer simple_sorted \
+                    --replay-buffer weighted_mean \
                     --replay-weights "$replay_weights" \
                     --buffer-size 10 \
                     --cutoff-lower "$lower" \

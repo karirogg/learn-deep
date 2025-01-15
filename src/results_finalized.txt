@@ -163,7 +163,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/r3f2qkc5
 Using device: mps
 normalizing weights...done | new weights: {'vog': 1.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -318,7 +318,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/laloc0eq
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 1.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -473,7 +473,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/fmtgrbbx
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 1.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -827,7 +827,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/v5vxcy7h
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 1.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -1181,7 +1181,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/6zcutrm9
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 1.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -1535,7 +1535,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/9nludzwi
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 1.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -2043,7 +2043,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/tfv0fvuv
 Using device: mps
 normalizing weights...done | new weights: {'vog': 1.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -2198,7 +2198,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/y9slso6q
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 1.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -2353,7 +2353,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/pj72ht8h
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 1.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -2707,7 +2707,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/f7jdphpc
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 1.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -3061,7 +3061,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/tbzowqb8
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 1.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -3415,7 +3415,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/teayvwqk
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 1.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -3923,7 +3923,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/z3k8v6nf
 Using device: mps
 normalizing weights...done | new weights: {'vog': 1.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -4078,7 +4078,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/sa3zmnp8
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 1.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -4233,7 +4233,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/69tlslql
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 1.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -4587,7 +4587,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/7dmkvbn1
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 1.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -4941,7 +4941,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/ybbivml3
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 1.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -5296,7 +5296,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/l9edhlyp
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 1.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -5804,7 +5804,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/vknk2qng
 Using device: mps
 normalizing weights...done | new weights: {'vog': 1.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -5959,7 +5959,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/kfoykm4m
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 1.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -6114,7 +6114,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/7re0wy7y
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 1.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -6468,7 +6468,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/bs19wsqc
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 1.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -6822,7 +6822,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/ibocyw3t
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 1.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -7177,7 +7177,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/yvw6lqkr
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 1.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -7685,7 +7685,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/a51c5kyv
 Using device: mps
 normalizing weights...done | new weights: {'vog': 1.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -7840,7 +7840,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/e1r1p1ko
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 1.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -7995,7 +7995,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/l7avf4xm
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 1.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -8349,7 +8349,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/u185w7qx
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 1.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -8703,7 +8703,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/k1np5w02
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 1.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -9057,7 +9057,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/2m9on8ic
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 1.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]

@@ -1,8 +1,8 @@
 Seed,Strategy,Metric,Task 1 Initial Accuracy,Task 1 Final Accuracy,Task 2 Initial Accuracy,Task 2 Final Accuracy
 69,uniform,-,0.0716,0.0776,0.0228,0.0812
-69,simple_sorted,vog,-,0.088,-,0.087
-69,simple_sorted,learning_speed,-,0.0774,-,0.093
-69,simple_sorted,predictive_entropy,-,0.0748,-,0.0862
-69,simple_sorted,mutual_information,-,0.0884,-,0.0876
-69,simple_sorted,variation_ratio,-,0.0734,-,0.077
-69,simple_sorted,mean_std_deviation,-,0.076,-,0.0774
+69,weighted_mean,vog,-,0.088,-,0.087
+69,weighted_mean,learning_speed,-,0.0774,-,0.093
+69,weighted_mean,predictive_entropy,-,0.0748,-,0.0862
+69,weighted_mean,mutual_information,-,0.0884,-,0.0876
+69,weighted_mean,variation_ratio,-,0.0734,-,0.077
+69,weighted_mean,mean_std_deviation,-,0.076,-,0.0774

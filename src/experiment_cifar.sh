@@ -40,7 +40,7 @@ for seed in "${seeds[@]}"; do
             --n 2 \
             --classes 100 \
             --epochs 100 \
-            --replay-buffer simple_sorted \
+            --replay-buffer weighted_mean \
             --buffer-size 10 \
             --cutoff-lower 20 \
             --cutoff-upper 20 \

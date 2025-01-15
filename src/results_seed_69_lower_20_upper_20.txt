@@ -24,7 +24,7 @@ Task 2 test accuracy: [0.0228, 0.0812]
 Running with replay weight: vog set to 1.0
 Using device: mps
 normalizing weights...done | new weights: {'vog': 1.0, 'learning_speed': 0.0, 'predictive_entropy': 0.0, 'mutual_information': 0.0, 'variation_ratio': 0.0, 'mean_std_deviation': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 WARNING: loading checkpoint from previous run
 populating replay buffer... WARNING: metric mc_variance not found or has wrong shape, skipping...
 available metrics: dict_keys(['vog', 'learning_speed', 'predictive_entropy', 'mutual_information', 'variation_ratio', 'mean_std_deviation', 'mc_variance'])
@@ -44,7 +44,7 @@ Task 2 test accuracy: [0.087]
 Running with replay weight: learning_speed set to 1.0
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 1.0, 'predictive_entropy': 0.0, 'mutual_information': 0.0, 'variation_ratio': 0.0, 'mean_std_deviation': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 WARNING: loading checkpoint from previous run
 populating replay buffer... WARNING: metric mc_variance not found or has wrong shape, skipping...
 available metrics: dict_keys(['vog', 'learning_speed', 'predictive_entropy', 'mutual_information', 'variation_ratio', 'mean_std_deviation', 'mc_variance'])
@@ -64,7 +64,7 @@ Task 2 test accuracy: [0.093]
 Running with replay weight: predictive_entropy set to 1.0
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'predictive_entropy': 1.0, 'mutual_information': 0.0, 'variation_ratio': 0.0, 'mean_std_deviation': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 WARNING: loading checkpoint from previous run
 populating replay buffer... WARNING: metric mc_variance not found or has wrong shape, skipping...
 available metrics: dict_keys(['vog', 'learning_speed', 'predictive_entropy', 'mutual_information', 'variation_ratio', 'mean_std_deviation', 'mc_variance'])
@@ -84,7 +84,7 @@ Task 2 test accuracy: [0.0862]
 Running with replay weight: mutual_information set to 1.0
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'predictive_entropy': 0.0, 'mutual_information': 1.0, 'variation_ratio': 0.0, 'mean_std_deviation': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 WARNING: loading checkpoint from previous run
 populating replay buffer... WARNING: metric mc_variance not found or has wrong shape, skipping...
 available metrics: dict_keys(['vog', 'learning_speed', 'predictive_entropy', 'mutual_information', 'variation_ratio', 'mean_std_deviation', 'mc_variance'])
@@ -104,7 +104,7 @@ Task 2 test accuracy: [0.0876]
 Running with replay weight: variation_ratio set to 1.0
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'predictive_entropy': 0.0, 'mutual_information': 0.0, 'variation_ratio': 1.0, 'mean_std_deviation': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 WARNING: loading checkpoint from previous run
 populating replay buffer... WARNING: metric mc_variance not found or has wrong shape, skipping...
 available metrics: dict_keys(['vog', 'learning_speed', 'predictive_entropy', 'mutual_information', 'variation_ratio', 'mean_std_deviation', 'mc_variance'])
@@ -124,7 +124,7 @@ Task 2 test accuracy: [0.077]
 Running with replay weight: mean_std_deviation set to 1.0
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'predictive_entropy': 0.0, 'mutual_information': 0.0, 'variation_ratio': 0.0, 'mean_std_deviation': 1.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 WARNING: loading checkpoint from previous run
 populating replay buffer... WARNING: metric mc_variance not found or has wrong shape, skipping...
 available metrics: dict_keys(['vog', 'learning_speed', 'predictive_entropy', 'mutual_information', 'variation_ratio', 'mean_std_deviation', 'mc_variance'])

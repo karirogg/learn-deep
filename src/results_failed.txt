@@ -163,7 +163,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/wfq8qult
 Using device: mps
 normalizing weights...done | new weights: {'vog': 1.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -227,7 +227,7 @@ Traceback (most recent call last):
     training_loop(
   File "/Users/kari/ETH/2425haust/deep learning/learn-deep/src/models/training_loop.py", line 156, in training_loop
     replay_buffer.strategy(model, task, task_id, metrics, max_replay_buffer_size / (len(train_tasks) - 1))
-  File "/Users/kari/ETH/2425haust/deep learning/learn-deep/src/replay_buffers/replay.py", line 96, in simple_sorted
+  File "/Users/kari/ETH/2425haust/deep learning/learn-deep/src/replay_buffers/replay.py", line 96, in weighted_mean
     sorted_idcs = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics[metric][i], reverse=True))
   File "/Users/kari/ETH/2425haust/deep learning/learn-deep/src/replay_buffers/replay.py", line 96, in <lambda>
     sorted_idcs = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics[metric][i], reverse=True))
@@ -245,7 +245,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/c43nc0us
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 1.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -309,7 +309,7 @@ Traceback (most recent call last):
     training_loop(
   File "/Users/kari/ETH/2425haust/deep learning/learn-deep/src/models/training_loop.py", line 156, in training_loop
     replay_buffer.strategy(model, task, task_id, metrics, max_replay_buffer_size / (len(train_tasks) - 1))
-  File "/Users/kari/ETH/2425haust/deep learning/learn-deep/src/replay_buffers/replay.py", line 96, in simple_sorted
+  File "/Users/kari/ETH/2425haust/deep learning/learn-deep/src/replay_buffers/replay.py", line 96, in weighted_mean
     sorted_idcs = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics[metric][i], reverse=True))
   File "/Users/kari/ETH/2425haust/deep learning/learn-deep/src/replay_buffers/replay.py", line 96, in <lambda>
     sorted_idcs = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics[metric][i], reverse=True))
@@ -327,7 +327,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/5ncybh0d
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 1.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -590,7 +590,7 @@ Traceback (most recent call last):
     training_loop(
   File "/Users/kari/ETH/2425haust/deep learning/learn-deep/src/models/training_loop.py", line 156, in training_loop
     replay_buffer.strategy(model, task, task_id, metrics, max_replay_buffer_size / (len(train_tasks) - 1))
-  File "/Users/kari/ETH/2425haust/deep learning/learn-deep/src/replay_buffers/replay.py", line 96, in simple_sorted
+  File "/Users/kari/ETH/2425haust/deep learning/learn-deep/src/replay_buffers/replay.py", line 96, in weighted_mean
     sorted_idcs = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics[metric][i], reverse=True))
   File "/Users/kari/ETH/2425haust/deep learning/learn-deep/src/replay_buffers/replay.py", line 96, in <lambda>
     sorted_idcs = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics[metric][i], reverse=True))
@@ -608,7 +608,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/tqbsq1e5
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 1.0, 'mc_variation_ratio': 0.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
@@ -871,7 +871,7 @@ Traceback (most recent call last):
     training_loop(
   File "/Users/kari/ETH/2425haust/deep learning/learn-deep/src/models/training_loop.py", line 156, in training_loop
     replay_buffer.strategy(model, task, task_id, metrics, max_replay_buffer_size / (len(train_tasks) - 1))
-  File "/Users/kari/ETH/2425haust/deep learning/learn-deep/src/replay_buffers/replay.py", line 96, in simple_sorted
+  File "/Users/kari/ETH/2425haust/deep learning/learn-deep/src/replay_buffers/replay.py", line 96, in weighted_mean
     sorted_idcs = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics[metric][i], reverse=True))
   File "/Users/kari/ETH/2425haust/deep learning/learn-deep/src/replay_buffers/replay.py", line 96, in <lambda>
     sorted_idcs = torch.Tensor(sorted(torch.arange(labels.shape[0]), key=lambda i : metrics[metric][i], reverse=True))
@@ -889,7 +889,7 @@ wandb: ⭐️ View project at https://wandb.ai/learn-deeper/learn-deep
 wandb: 🚀 View run at https://wandb.ai/learn-deeper/learn-deep/runs/zcarn3fe
 Using device: mps
 normalizing weights...done | new weights: {'vog': 0.0, 'learning_speed': 0.0, 'mc_entropy': 0.0, 'mc_mutual_information': 0.0, 'mc_variation_ratio': 1.0, 'mc_mean_std': 0.0, 'mc_variance': 0.0}
-running with replay strategy: simple_sorted
+running with replay strategy: weighted_mean
 Training on task 1
 
   0%|          | 0/50 [00:00<?, ?it/s]
