@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.init as init
 
 
-
+# Define the Task-IL Neural Network for train on the EWF dataset
 class TaskILNN(nn.Module):
     def __init__(
         self, num_tasks: int = 4, dropout: float = 0.5

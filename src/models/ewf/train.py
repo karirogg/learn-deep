@@ -24,7 +24,7 @@ from utils.fix_seed import fix_seed
 
 
 if __name__ == "__main__":
-
+    # define flags for script
     parser = argparse.ArgumentParser()
     parser.add_argument("--epochs", action="store", type=int, default=10, help="Number of epochs")
     parser.add_argument("--wandb", action="store_true")
@@ -38,7 +38,11 @@ if __name__ == "__main__":
     parser.add_argument("--cutoff-upper", action="store", type=int, default=20, help="Percentage of upper cutoff")
 
     args = parser.parse_args()
+
+    # set seed
     fix_seed(args.seed)
+
+    # hyperparameters for task-incremental learning
     n = 4
     epochs_per_task = args.epochs
 
@@ -52,23 +56,17 @@ if __name__ == "__main__":
 
     wandb.init(project="learn-deep", config=model_config, mode="online" if args.wandb else "disabled")
 
-    # TODO: Possibly use lower learning rate
+    # hyperparameters and optimizer set up
     initial_lr = 1e-5
     lr_decay = 1
-    optimizer = torch.optim.Adam(model.parameters(), lr=initial_lr)
-
-    # TODO: After we have verified that task incremental learning works well, we will want to use SGD with momentum and a scheduler
-    # optimizer = torch.optim.SGD(
-    #    model.parameters(), lr=0.02, momentum=0.9, weight_decay=4e-4
-    # )
-    # scheduler = CosineAnnealingLR(optimizer, T_max=epochs_per_task * n)
-    
-    criterion = torch.nn.MSELoss()
-
     batch_size = 128
     replay_batch_size = 8
     num_checkpoints = 5
 
+    optimizer = torch.optim.Adam(model.parameters(), lr=initial_lr)
+    criterion = torch.nn.MSELoss()
+
+    # load the data in memory (no further preprocessing is needed)
     train_tasks = []
     test_tasks = []
 
@@ -109,9 +107,14 @@ if __name__ == "__main__":
                 )
             )
 
+    # setup replay buffer
     replay_params = {"remove_lower_percent" : args.cutoff_lower, "remove_upper_percent" : args.cutoff_upper}
     replay_weights = json.loads(args.replay_weights)
-    replay_buffer = Replay(replay_params, strategy=args.replay_buffer, batch_size=replay_batch_size, samples_to_add=len(train_tasks[0].dataset) * args.buffer_size // 100, num_tasks=n, weights=replay_weights)
+
+    # specify the number of samples to add in each task
+    # this value is calculated from the buffer-size argument which is a percentage of the training set
+    num_samples_to_add = len(train_tasks[0].dataset) * args.buffer_size // 100
+    replay_buffer = Replay(replay_params, strategy=args.replay_buffer, batch_size=replay_batch_size, samples_to_add=num_samples_to_add, num_tasks=n, weights=replay_weights)
     
     if args.replay_buffer:
         print("running with replay strategy:", args.replay_buffer)

@@ -22,7 +22,7 @@ from models.cifar.TIL_squeezenet import Task_IL_SqueezeNet
 from utils.fix_seed import fix_seed
 
 if __name__ == "__main__":
-
+    # define flags for script
     parser = argparse.ArgumentParser()
     parser.add_argument("--n", action="store", type=int, default=2, help="Number of tasks")
     parser.add_argument("--epochs", action="store", type=int, default=10, help="Number of epochs")
@@ -38,7 +38,11 @@ if __name__ == "__main__":
     parser.add_argument("--cutoff-upper", action="store", type=int, default=20, help="Percentage of upper cutoff")
 
     args = parser.parse_args()
+
+    # set seed
     fix_seed(args.seed)
+
+    # hyperparameters for task-incremental learning
     n = args.n
     epochs_per_task = args.epochs
     num_classes = args.classes
@@ -48,26 +52,22 @@ if __name__ == "__main__":
 
     model_config = {"num_classes" : num_classes}
 
+    # initialize model
     model = Task_IL_SqueezeNet(num_classes_per_task = int(num_classes / n), num_tasks=n)
     model.to(device)
 
     wandb.init(project="learn-deep", config=model_config, mode="online" if args.wandb else "disabled")
 
-    # TODO: Possibly optimize further
+    # set up hyperparamters, optimizer and loss function
     initial_lr = 5e-4
     lr_decay = 0.25
+    batch_size = 128
+    replay_batch_size = 8
 
     optimizer = torch.optim.Adam(model.parameters(), lr=initial_lr, weight_decay=5e-5)
 
-    # optimizer = torch.optim.SGD(
-    #     model.parameters(), lr=1e-3, momentum=0.9, weight_decay=4e-4
-    # )
-    # scheduler = CosineAnnealingLR(optimizer, T_max=epochs_per_task)
-
     criterion = torch.nn.CrossEntropyLoss()
 
-    batch_size = 128
-    replay_batch_size = 8
     # always want to store some checkpoint if we are storing them
     num_checkpoints = min(10, epochs_per_task)
 
@@ -75,11 +75,17 @@ if __name__ == "__main__":
         if not os.path.exists("checkpoints"):
             os.mkdir("checkpoints")
 
+    # preprocess data
     train_tasks, test_tasks = preprocess_cifar(num_classes, n, batch_size, device)
 
+    # set up replay byffer
     replay_params = {"remove_lower_percent" : args.cutoff_lower, "remove_upper_percent" : args.cutoff_upper}
     replay_weights = json.loads(args.replay_weights)
-    replay_buffer = Replay(replay_params, strategy=args.replay_buffer, batch_size=replay_batch_size, samples_to_add=len(train_tasks[0].dataset) * args.buffer_size // 100, num_tasks=n, weights=replay_weights)
+
+    # specify the number of samples to add in each task
+    # this value is calculated from the buffer-size argument which is a percentage of the training set
+    num_samples_to_add = len(train_tasks[0].dataset) * args.buffer_size // 100
+    replay_buffer = Replay(replay_params, strategy=args.replay_buffer, batch_size=replay_batch_size, samples_to_add=num_samples_to_add, num_tasks=n, weights=replay_weights)
 
     if args.replay_buffer:
         print("running with replay strategy:", args.replay_buffer)
@@ -120,6 +126,7 @@ if __name__ == "__main__":
             if value > 0:
                 replay_buffer_details += f'_{key}_{value}'
 
+    # plots
     print("creating plots...")
     task_name = f'cifar_{num_classes}_n_{n}_epochs_{epochs_per_task}_replay_{replay_buffer_details}_seed_{args.seed}_lower_{args.cutoff_lower}_upper_{args.cutoff_upper}'
 
