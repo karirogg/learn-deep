@@ -59,4 +59,5 @@ For uniform sampling simply run:
 python -m models.cifar.train --n 2 --classes 100 --epochs 50 --replay-buffer uniform --wandb
 ```
 
-Note on reproducability: The results detailed in our report were obtained using CUDA 11.8
+## Reproducing Results from Report
+The results detailed in our report were obtained using CUDA 11.8 and training for 100 epochs per task. For CIFAR-100, we averaged across the random seeds 69, 420 and 80085. For the EuropeWindFarm dataset, we additionally used seeds 31 and 42. The lower and upper cutoff values were 20% and 35% respectively on CIFAR-100, and 20% each on EWF. We used a buffer size of 10%. The applied replay strategies and weights are detailed in the report and can be applied as desired. 
