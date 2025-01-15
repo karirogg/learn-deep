@@ -9,8 +9,8 @@
 - [x] delete pycache
 - [ ] what do to with `src/models/cifar/experiments`? throw away?
 - [ ] move correlation_analysis to `src/notebooks`
-- [ ] remove useless imports
-- [ ] t test
+- [x] remove useless imports
+- [x] t test
 
 ## Create Virtual Environment
 
