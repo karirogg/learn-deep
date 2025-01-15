@@ -1,6 +1,3 @@
-import torch
-
-
 def calculate_learning_speed(epoch_wise_classification_matrices):
     """
     Calculate the learning speed of examples from epoch wise classification matrices each of shape [num_examples_per_task, num_tasks, epochs_per_task].

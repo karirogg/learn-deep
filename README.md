@@ -4,10 +4,13 @@
 
 - [x] comment most of the code
 - [ ] comment code for squeezenet?
-- [ ] delete irrelevant files
-- [ ] combine analysis notebooks? or leave them as is
-- [ ] remove useless imports
-- [ ] t test
+- [ ] comment metrics code
+- [x] delete irrelevant files
+- [x] delete pycache
+- [ ] what do to with `src/models/cifar/experiments`? throw away?
+- [ ] move correlation_analysis to `src/notebooks`
+- [x] remove useless imports
+- [x] t test
 
 ## Setup
 After cloning this repository and navigating to its root folder, create a virtual environment and install all required packages:
