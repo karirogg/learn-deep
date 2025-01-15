@@ -56,8 +56,7 @@ The following flags can be provided:
 This is an example of the flags one can include in the call for classification (importantly set the "mc_variance" weight to 0)
 
 ```
-python -m models.cifar.train --n 2 --classes 100 --epochs 50 --replay-buffer weighted_mean --replay-weights '{"vog": 1.0, "learning_speed": 1.
-0, "predictive_entropy": 1.0, "mutual_information": 1.0, "variation_ratio": 1.0, "mean_std_deviation": 1.0, "mc_variance": 0.0}' --wandb
+python -m models.cifar.train --n 2 --classes 100 --epochs 50 --replay-buffer weighted_mean --replay-weights '{"vog": 1.0, "learning_speed": 1.0, "predictive_entropy": 1.0, "mutual_information": 1.0, "variation_ratio": 1.0, "mean_std_deviation": 1.0, "mc_variance": 0.0}' --wandb
 ```
 
 This is an example for regression (importantly set the all mc-weights except for "mc_variance" to 0):
