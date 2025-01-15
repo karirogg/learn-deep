@@ -43,8 +43,8 @@ The following flags can be provided:
 - `--n`: The number of tasks trained on for the CIFAR datasets. This value has to match the preprocessing command that was previously run. Default: `2`
 - `--classes`: The number of different classes in the training data for CIFAR. For CIFAR-10 and CIFAR-100, the value should be set to 10 or 100, respectively. Default: `10`
 - `--epochs`: The number of epochs that should be run, per task. Default: `10`
-- `--replay-buffer`: Replay buffer strategy, should either be empty, `uniform`, `weighted_mean`, or `mdfm`. Default: `None`.
-- `--replay-weights`: A JSON dictionary indicating the weights of each of the metrics for the `weighted_mean` strategy. The weights are normalized automatically. Example: `{"vog": 1.0, "learning_speed": 1.0, "predictive_entropy": 1.0, "mutual_information": 1.0, "variation_ratio": 1.0, "mean_std_deviation": 1.0, "mc_variance": 0.0}'`. Default: `{}`.
+- `--replay-buffer`: Replay buffer strategy, should either be empty, `uniform`, `weighted_mean`, or `mdfm` (Maximum Distance from Median). Default: `None`.
+- `--replay-weights`: A JSON dictionary indicating the weights of each of the metrics for the `weighted_mean` and `mdfm` strategies. For `weighted_mean`, the weights are normalized automatically. For `mdfm`, any metric with weight larger than zero will be considered equally during replay buffer populatoin. Example: `{"vog": 1.0, "learning_speed": 1.0, "predictive_entropy": 1.0, "mutual_information": 1.0, "variation_ratio": 1.0, "mean_std_deviation": 1.0, "mc_variance": 0.0}'`. Default: `{}`.
 - `--seed`: Seed for training (for reproducibility). In the paper, the three seeds for CIFAR are 69, 420 and 80085 and for EWF the five seeds are 31, 42, 69, 420 and 80085. Default: `42`.
 - `--buffer-size`: The maximum size for the replay buffer, in percentage. Default: `10` (meaning 10% of the training data per task)
 - `--cutoff-lower`: The lower cutoff threshold for the experiment. Default: `20` (meaning 20%)
@@ -56,13 +56,14 @@ The following flags can be provided:
 This is an example of the flags one can include in the call for classification (importantly set the "mc_variance" weight to 0)
 
 ```
-python -m models.cifar.train --n 2 --classes 100 --epochs 50 --replay-buffer weighted_mean --replay_weights '{"vog": 1.0, "learning_speed": 1.0, "predictive_entropy": 1.0, "mutual_information": 1.0, "variation_ratio": 1.0, "mean_std_deviation": 1.0, "mc_variance": 0.0}' --wandb
+python -m models.cifar.train --n 2 --classes 100 --epochs 50 --replay-buffer weighted_mean --replay-weights '{"vog": 1.0, "learning_speed": 1.
+0, "predictive_entropy": 1.0, "mutual_information": 1.0, "variation_ratio": 1.0, "mean_std_deviation": 1.0, "mc_variance": 0.0}' --wandb
 ```
 
 This is an example for regression (importantly set the all mc-weights except for "mc_variance" to 0):
 
 ```
-python -m models.ewf.train --epochs 50 --replay-buffer weighted_mean --replay_weights '{"vog": 0.1, "learning_speed": 0.1, "predictive_entropy": 0.0, "mutual_information": 0.0, "variation_ratio": 0.0, "mean_std_deviation": 0.0, "mc_variance": 0.1}' --wandb
+python -m models.ewf.train --epochs 50 --replay-buffer mdfm --replay-weights '{"vog": 1.0, "learning_speed": 1.0, "predictive_entropy": 0.0, "mutual_information": 0.0, "variation_ratio": 0.0, "mean_std_deviation": 0.0, "mc_variance": 1.0}' --wandb
 ```
 
 For uniform sampling simply run:
@@ -70,3 +71,5 @@ For uniform sampling simply run:
 ```
 python -m models.cifar.train --n 2 --classes 100 --epochs 50 --replay-buffer uniform --wandb
 ```
+
+Note on reproducability: The results detailed in our report were obtained using CUDA 11.8
