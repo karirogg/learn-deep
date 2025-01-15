@@ -4,20 +4,16 @@ import os
 import torch
 import wandb
 import numpy as np
-import pdb
 import json
 import pickle
 
 from replay_buffers.replay import Replay
-from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from models.cifar.accuracy import accuracy
 from models.cifar.evaluate import evaluate
 from models.cifar.task_preprocessing import preprocess_cifar
 from models.training_loop import training_loop
 from models.cifar.TIL_squeezenet import Task_IL_SqueezeNet
-
-# from metrics.vog import compute_VoG, visualize_VoG
 
 from utils.fix_seed import fix_seed
 
