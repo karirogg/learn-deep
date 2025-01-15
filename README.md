@@ -7,6 +7,7 @@
 - [ ] delete irrelevant files
 - [ ] combine analysis notebooks? or leave them as is
 - [ ] remove useless imports
+- [ ] t test
 
 ## Create Virtual Environment
 
