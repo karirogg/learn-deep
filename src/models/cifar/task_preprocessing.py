@@ -25,8 +25,10 @@ class TaskDataset(Dataset):
 
         return image.to(self.device), label.to(self.device), idx
 
-
 def preprocess_cifar(num_classes: int, n: int, batch_size: int, device: torch.device):
+    '''
+    Preprocess CIFAR-10 or CIFAR-100 dataset by applying transformations and creating DataLoaders for each task.
+    '''
     train_tasks = []
     test_tasks = []
 
@@ -82,18 +84,5 @@ def preprocess_cifar(num_classes: int, n: int, batch_size: int, device: torch.de
         test_tasks.append(
             DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
         )
-
-        # Verify that transformations are correctly applied
-        # def imshow(img, mean, std):
-        #     mean = torch.tensor(mean).view(3, 1, 1)
-        #     std = torch.tensor(std).view(3, 1, 1)
-        #     img = img * std + mean
-        #     npimg = img.numpy()
-        #     plt.imshow(np.transpose(npimg, (1, 2, 0)))
-        #     plt.show()
-
-        # dataiter = iter(DataLoader(train_dataset, batch_size=batch_size, shuffle=True))
-        # images, labels, _ = next(dataiter)
-        # imshow(torchvision.utils.make_grid(images[:4]), MEAN, STD)
 
     return train_tasks, test_tasks

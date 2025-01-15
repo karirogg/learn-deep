@@ -2,6 +2,9 @@ import torch
 from typing import Callable
 
 def evaluate(model: torch.nn.Module, evaluation_loader: torch.utils.data.DataLoader, criterion: torch.nn.Module, device: torch.device, metric: Callable[[float], float], task_id: int) -> tuple[float, float]:
+    '''
+    Evaluate the model on an evaluation dataset, considering both aggregated and sample-wise metrics.
+    '''
     model.eval()
     test_loss = 0
     test_accuracy = 0
