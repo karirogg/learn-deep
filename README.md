@@ -4,8 +4,11 @@
 
 - [x] comment most of the code
 - [ ] comment code for squeezenet?
-- [ ] delete irrelevant files
-- [ ] combine analysis notebooks? or leave them as is
+- [ ] comment metrics code
+- [x] delete irrelevant files
+- [x] delete pycache
+- [ ] what do to with `src/models/cifar/experiments`? throw away?
+- [ ] move correlation_analysis to `src/notebooks`
 - [ ] remove useless imports
 - [ ] t test
 

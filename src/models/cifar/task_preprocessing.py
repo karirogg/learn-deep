@@ -2,11 +2,6 @@ import torch
 import pickle
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
-import numpy as np
-import matplotlib.pyplot as plt
-import torchvision
-
-
 class TaskDataset(Dataset):
     def __init__(self, data, labels, transform, device):
         self.data = data

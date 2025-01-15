@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.init as init
 
-
 class Fire(nn.Module):
     def __init__(
         self,

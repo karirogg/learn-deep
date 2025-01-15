@@ -4,12 +4,10 @@ import os
 import torch
 import wandb
 import numpy as np
-import pdb
 import json
 import pickle
 
 from replay_buffers.replay import Replay
-from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader, TensorDataset
 
 from models.ewf.mse import mse
@@ -17,8 +15,6 @@ from models.cifar.evaluate import evaluate
 from models.ewf.til_nn import TaskILNN
 
 from models.training_loop import training_loop
-
-# from metrics.vog import compute_VoG, visualize_VoG
 
 from utils.fix_seed import fix_seed
 
