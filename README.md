@@ -3,12 +3,12 @@
 ## TODO
 
 - [x] comment most of the code
-- [ ] comment code for squeezenet?
-- [ ] comment metrics code
+- [x] comment code for squeezenet?
+- [x] comment metrics code
 - [x] delete irrelevant files
 - [x] delete pycache
 - [ ] what do to with `src/models/cifar/experiments`? throw away?
-- [ ] move correlation_analysis to `src/notebooks`
+- [x] move correlation_analysis to `src/notebooks`
 - [x] remove useless imports
 - [x] t test
 

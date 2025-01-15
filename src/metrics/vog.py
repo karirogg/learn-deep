@@ -32,7 +32,6 @@ class VoG:
             if len(logits.shape) == 1:
                 selected_logits = logits[torch.arange(labels.shape[0])]
             else:
-                # probs = torch.nn.functional.softmax(logits, dim=1)
                 selected_logits = logits[torch.arange(labels.shape[0]), labels]
 
             selected_logits.backward(ones)
@@ -67,16 +66,8 @@ class VoG:
         grad_variances = torch.mean(grad_variances, dim=0)  # [num_examples, H, W]
         if self.is_classification:
             grad_variances = grad_variances.mean(dim=[1, 2])  # average over pixels
-            # normalise per class
-            # for i in range(50):
-            #     class_start = i * 500
-            #     class_variances = grad_variances[class_start : class_start + 500]
-            #     grad_variances[class_start : class_start + 500] = (
-            #         class_variances - class_variances.mean()
-            #     ) / (class_variances.std() + 1e-8)
         else:
             grad_variances = grad_variances.mean(axis=1)
-            # grad_variances = (grad_variances - grad_variances.mean()) / (grad_variances.std() + 1e-8)
 
         if early:
             self.result["early"] = grad_variances
