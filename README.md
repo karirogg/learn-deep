@@ -2,11 +2,11 @@
 
 ## TODO
 
-[x] comment most of the code
-[ ] comment code for squeezenet?
-[ ] delete irrelevant files
-[ ] combine analysis notebooks? or leave them as is
-[ ] remove useless imports
+- [x] comment most of the code
+- [ ] comment code for squeezenet?
+- [ ] delete irrelevant files
+- [ ] combine analysis notebooks? or leave them as is
+- [ ] remove useless imports
 
 ## Create Virtual Environment
 
