@@ -1,17 +1,5 @@
 # Difficulty-Aware Sampling for Enhanced Replay Buffers
 
-## TODO
-
-- [x] comment most of the code
-- [x] comment code for squeezenet?
-- [x] comment metrics code
-- [x] delete irrelevant files
-- [x] delete pycache
-- [ ] what do to with `src/models/cifar/experiments`? throw away?
-- [x] move correlation_analysis to `src/notebooks`
-- [x] remove useless imports
-- [x] t test
-
 ## Setup
 After cloning this repository and navigating to its root folder, create a virtual environment and install all required packages:
 ```
