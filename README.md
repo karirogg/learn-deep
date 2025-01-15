@@ -15,6 +15,12 @@ From `/src`, the preprocessing script can be run in a virtual environment as fol
 python -m preprocessing.cifar_100 --n 2
 ```
 
+for the CIFAR dataset. The flag `--n` indicates how many tasks will be used. For the EWF dataset, the following command should be run:
+
+```
+python -m preprocessing.ewf
+```
+
 This script splits the data into different tasks and into training and test sets and saves them as pickled files.
 
 ## Running training loop
@@ -24,6 +30,14 @@ The training loop can be run after the preprocessing script has been run from `/
 ```
 python -m models.cifar.train
 ```
+
+for the CIFAR datasets and
+
+```
+python -m models.ewf.train
+```
+
+for the EWF dataset.
 
 This command provides some sensible default values, but an exhaustive list of the possible flags to include in the command is as follows:
 
