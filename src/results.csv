@@ -1,5 +1,0 @@
-Seed,Strategy,Metric,Task 1 Initial Accuracy,Task 1 Final Accuracy,Task 2 Initial Accuracy,Task 2 Final Accuracy
-69,uniform,-,0.6138,0.5808,0.0178,0.6434
-69,weighted_mean,vog,-,0.5926,-,0.6484
-69,weighted_mean,learning_speed,-,0.5582,-,0.6208
-69,weighted_mean,predictive_entropy,-,0.5432,-,0.6172
